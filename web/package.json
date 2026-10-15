@@ -1,0 +1,18 @@
+{
+  "name": "floodtwin-local-interface",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node --check app.js && node --check scene.js && node --check workspace.js && node --check hybrid.js && node --check hybrid-model.js",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "cesium": "1.146.0",
+    "leaflet": "1.9.4",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  }
+}

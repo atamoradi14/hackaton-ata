@@ -1,0 +1,140 @@
+# Auckland FlowLab
+
+An Auckland property flood digital twin research prototype, with real terrain,
+interactive inspection and explicitly reviewed exploratory hydraulics.
+
+The development environment is installed and validated on Windows 11 / WSL2
+Ubuntu-24.04 / Docker Desktop. Actual SFINCS synthetic rainfall conservation and
+dry-control runs pass. Official site address/parcel were matched and user-confirmed;
+bounded actual GIS, DEM, DSM and point-cloud data are prepared privately.
+Actual exploratory site rain, dry-control and hypothetical finite-wall SFINCS
+runs now pass the stated stability checks and are available in the interactive
+terrain studio. They remain uncalibrated; exact site mass closure is unverified,
+and no property flood-risk verdict is provided. The public app is deployed
+at [daryajan.com](https://daryajan.com) on the dedicated Helsinki k3s namespace.
+
+## Complete technical references
+
+- **[README_METHODOLOGY.md](README_METHODOLOGY.md)** â€” approach, full data inventory,
+  source dates/licences, accuracy and QC figures, terrain/roof/wall reconstruction,
+  hydraulic formulation, exact scenario settings, HIRDS workflow, numerical
+  validation, recorded results, outputs and remaining scientific work.
+- **[README_ARCHITECTURE.md](README_ARCHITECTURE.md)** â€” system and sequence diagrams,
+  tested tools/versions, source layout, HTTP APIs, workers/storage, Windows/WSL,
+  Docker/Compose, Kubernetes topology, Caddy/TLS/authentication, private configuration,
+  operational commands, backup/rollback and scaling limits.
+
+## Open the local web app
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start-app.ps1
+```
+
+Open **http://localhost:8765**. Auckland FlowLab provides an interactive map, official
+address/parcel review, confirmation-gated automatic data preparation, terrain
+profiles/preview, layer controls, provenance exports and a separate interactive
+real-solver synthetic lab. Each confirmed address has its own private workspace.
+Exploratory site hydraulics require explicit review of assumed inputs; reviewed
+design-storm modelling remains gated by scientific data and domain review.
+See [docs/LOCAL_APP.md](docs/LOCAL_APP.md) for workflow, supported coverage and stop
+commands. Both the local app and public Kubernetes deployment are available.
+
+## Run from this project directory in PowerShell
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/validate.ps1
+powershell -ExecutionPolicy Bypass -File scripts/floodtwin.ps1 doctor
+```
+
+For installation/restoration, see [docs/SETUP.md](docs/SETUP.md). Exact tested
+Conda builds and PyPI versions live in `locks/`; independent restore was tested.
+Docker Compose separates geospatial tooling and the pinned real SFINCS solver.
+QGIS LTR and CloudCompare run natively. PostGIS is optional and uninitialized;
+SWMM is separately installed and is not coupled to SFINCS.
+
+## Implemented CLI
+
+In the WSL `floodtwin` environment, or through `scripts/floodtwin.ps1`:
+
+```text
+floodtwin doctor [--online]
+floodtwin synthetic build
+floodtwin synthetic validate
+floodtwin synthetic-quality run --root runs/quality-new
+floodtwin synthetic-quality validate --root runs/quality-new
+floodtwin resolve-address --address "<number street, suburb, city>"
+floodtwin discover
+floodtwin discover-elevation
+floodtwin fetch-discovery
+floodtwin prepare-terrain-discovery
+floodtwin fetch-pointcloud
+floodtwin screen-domain
+floodtwin serve [--port 8765]
+```
+
+The discovery extent is a 2 km Ã— 2 km GIS/terrain window. Point-cloud crop is
+200 m Ã— 200 m; two official-index tiles were selected. These are preliminary
+data-acquisition windows, **not a final connected hydraulic domain**.
+Terrain D8 screening is distinctly labelled and is not hydraulic water motion.
+The offline hydraulic quality suite uses the actual SFINCS solver for still water,
+downslope redistribution, a finite overflowing weir, a below-crest control and
+an explicitly infinite barrier. It checks all-cell volume histories and compares
+1 m/2 m cells and 0.25 s/0.5 s maximum timesteps. Use a new run directory each
+time; existing runs are preserved. See [docs/HYDRAULIC_VALIDATION.md](docs/HYDRAULIC_VALIDATION.md).
+`scripts/site-qc.py` checks same-survey ground/DEM consistency and saves profiles;
+it does not independently validate terrain accuracy or assign barrier crests.
+
+`data/processed/site/` contains local review maps, GeoPackages, aligned 1 m DEM/DSM,
+cropped LAZ, source hashes, QC flags and screening outputs. The current survey is
+Auckland Part 1 2024, selected through actual capture polygons and intersecting
+STAC tiles. Both horizontal CRS and vertical datum are verified. Raw originals
+are preserved; noisy/withheld point classifications are retained and flagged.
+
+## Current gates
+
+The user has a DataHub account and configured private API access, but no approved
+site rainfall order file was available at the last check. Design-storm modelling requires a
+documented storm/hyetograph, connected upstream/downstream domain, verified
+boundary/outlet assumptions, roughness/loss scenarios and reviewed barriers.
+Pipe lines do not establish surveyed connectivity, capacity or datum. Unknown
+building entry thresholds and fence porosity are not assigned automatically.
+
+Later `build-hydraulics`, site `simulate`, `compare` and site hydraulic `report` commands
+in CODEX_MASTER_PLAN.md are requirements for future milestones, not implemented
+commands. Follow [PROGRESS.md](PROGRESS.md) for actual tests and limitations.
+
+Keys remain in `.env`, never in Git. Private configs, raw geodata and runs are
+ignored and excluded from Docker build contexts. No remote repository or upload
+was created by this implementation. The user created an outer public repository;
+its source-checkout limitations are documented in the architecture README.
+Read-only GitHub MCP reuses the existing `gh` keyring; both GitHub
+and Playwright MCP passed real integration checks. Reload/trust the project in
+the host to load these project-scoped servers.
+
+## Own-node hosting
+
+For the current Helsinki k3s production deployment, use
+[how-to-deploy.md](how-to-deploy.md) for tested step-by-step release, backup,
+verification and rollback commands.
+
+The public Caddy/Compose deployment for `daryajan.com` is described in
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). It includes the locked geospatial runtime,
+native pinned SFINCS, persistent volumes, deployment/validation/backup commands
+and a names-only missing-environment checklist. Start with
+`.env.production.example`; actual `.env.production` stays private and ignored.
+
+## Interactive terrain studio
+
+After confirming a property, choose **Interactive 3D** and open its terrain studio.
+Real aerial imagery, DEM/DSM, classified LiDAR roof meshes, inspection controls,
+GLB/annotated image exports and explicit hypothetical wall scenarios are described
+in [docs/TERRAIN_STUDIO.md](docs/TERRAIN_STUDIO.md). Real SFINCS exploratory rain/dry
+runs require an explicit assumptions review and remain uncalibrated. HIRDS catalogue
+and approved-order download commands are in [docs/HIRDS_API.md](docs/HIRDS_API.md).
+
+Interactive workspace update and scientific validation: [15 October 2026 report](docs/INTERACTIVE_UPGRADE_REPORT.md).
+
+Earth studio adds georeferenced LiDAR/aerial rendering, shared native simulation
+playback, source dates and bounded provider checks, with optional Google 3D
+surroundings. Google is intentionally disabled until configured. See
+[architecture](README_ARCHITECTURE.md) and [enable/deploy steps](how-to-deploy.md).

@@ -1,0 +1,8 @@
+# Separate environment for later coupling work, never implicitly surface-coupled.
+name: floodtwin-swmm
+channels: [conda-forge]
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - swmm-toolkit==0.16.2

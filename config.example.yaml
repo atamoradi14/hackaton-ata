@@ -1,0 +1,49 @@
+# EXAMPLE ONLY. Copy to configs/local_site.yaml and keep it PRIVATE.
+# Address is a target to be VERIFIED via LINZ NZ Addresses; no coordinate is implied.
+site:
+  address: "61 Pemberton Avenue, Bayview, Auckland, New Zealand"
+  verified_nz_address_id: null
+  verified_parcel_id: null
+  require_user_confirmation: true
+  horizontal_crs: "EPSG:2193"
+  vertical_datum: "NZVD2016"
+
+data:
+  search_2024_lidar_part_by_intersection: true
+  regionwide_download: false
+  use_raw_pointcloud_for_candidate_walls: true
+  provenance_required: true
+
+model:
+  engine: "sfincs"
+  mode: "2d_rain_on_grid"
+  domain_selection: "upstream_catchment_downstream_outlets"
+  pilot_cell_size_m: 2.0
+  source_terrain: "bare_earth_dem"
+  solver_executable: null
+
+rainfall:
+  source: "NIWA_HIRDS"
+  design_aep_percent: 1.0
+  event_duration_hours: null
+  hyetograph_csv: null  # actual data required for a real run
+  climate_scenario: "current"
+  infiltration_method: null  # choose and document using available data
+
+drainage:
+  scenario: "none_extreme" # alternate: partial_assumption or verified_network
+  missing_asset_capacity: "unmodelled"
+  missing_outfall: "unmodelled"
+  allow_hypothetical_capacity: false
+
+barriers:
+  require_manual_review: true
+  unknown_fence_porosity: "unmodelled"
+  real_wall_use_finite_crest: true
+  candidate_wall_geojson: null
+
+outputs:
+  location: "runs"
+  store_mass_balance: true
+  include_uncertainty_report: true
+  label_uncalibrated: true

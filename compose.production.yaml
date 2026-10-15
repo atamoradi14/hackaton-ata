@@ -1,0 +1,89 @@
+name: auckland-flowlab
+services:
+  app:
+    image: auckland-flowlab-app:local
+    build: .
+    platform: linux/amd64
+    init: true
+    restart: unless-stopped
+    command: ["serve", "--port", "8765"]
+    environment:
+      FLOODTWIN_BIND: 0.0.0.0
+      FLOODTWIN_PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-https://${DOMAIN:-daryajan.com}}
+      FLOODTWIN_MAX_ACTIVE_JOBS: ${MAX_ACTIVE_JOBS:-1}
+      LINZ_API_KEY: ${LINZ_API_KEY:?Set LINZ_API_KEY in the private environment file}
+      OPENTOPOGRAPHY_API_KEY: ${OPENTOPOGRAPHY_API_KEY:-}
+      OMP_NUM_THREADS: ${OMP_NUM_THREADS:-2}
+      PYTHONUNBUFFERED: "1"
+      MPLCONFIGDIR: /tmp/matplotlib
+      NUMBA_CACHE_DIR: /tmp/numba
+      XDG_CACHE_HOME: /tmp/cache
+      PYTHONDONTWRITEBYTECODE: "1"
+    expose: ["8765"]
+    volumes:
+      - site_data:/work/data
+      - model_runs:/work/runs
+      - site_configs:/work/configs
+      - reports:/work/reports
+    networks: [proxy]
+    read_only: true
+    tmpfs: ["/tmp:rw,size=512m"]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: ${APP_MEMORY_LIMIT:-6g}
+    cpus: ${APP_CPUS:-4}
+    pids_limit: 256
+    healthcheck:
+      test: ["CMD", "/opt/conda/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/healthz', timeout=5).read()"]
+      interval: 20s
+      timeout: 8s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  caddy:
+    image: caddy:2-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    restart: unless-stopped
+    depends_on:
+      app: {condition: service_healthy}
+    environment:
+      DOMAIN: ${DOMAIN:-daryajan.com}
+      ACME_EMAIL: ${ACME_EMAIL:?Set the certificate contact email}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [proxy]
+    security_opt: [no-new-privileges:true]
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+  postgis:
+    image: postgis/postgis@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+    profiles: [postgis]
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: floodtwin
+      POSTGRES_USER: floodtwin
+      POSTGRES_PASSWORD: ${POSTGIS_PASSWORD:-}
+    volumes: ["postgis_data:/var/lib/postgresql/data"]
+    networks: [proxy]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U floodtwin -d floodtwin"]
+      interval: 15s
+      retries: 5
+volumes:
+  site_data:
+  model_runs:
+  site_configs:
+  reports:
+  caddy_data:
+  caddy_config:
+  postgis_data:
+networks:
+  proxy:

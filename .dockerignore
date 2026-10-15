@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+backups
+.playwright-cli
+.playwright-mcp
+data
+runs
+configs
+reports
+scripts/hydromt_api_reference.txt
+node_modules
+web/node_modules
+output

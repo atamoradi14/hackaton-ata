@@ -1,0 +1,19 @@
+# Add this block to your existing Caddy configuration, with these environment
+# variables available to THAT Caddy process. Join its container to CADDY_NETWORK.
+{$DOMAIN:daryajan.com} {
+    encode zstd gzip
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options nosniff
+        -Server
+    }
+    request_body {
+        max_size 8KB
+    }
+    reverse_proxy auckland-flowlab-app:8765 {
+        header_up -Authorization
+        transport http {
+            response_header_timeout 240s
+        }
+    }
+}

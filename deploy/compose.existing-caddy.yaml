@@ -1,0 +1,11 @@
+# Merge with compose.production.yaml; start ONLY app, never bundled caddy.
+services:
+  app:
+    networks:
+      proxy: {}
+      edge:
+        aliases: [auckland-flowlab-app]
+networks:
+  edge:
+    external: true
+    name: ${CADDY_NETWORK:-caddy}

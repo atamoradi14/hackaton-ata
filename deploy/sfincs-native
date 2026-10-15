@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+exec /opt/sfincs/lib/ld-linux-x86-64.so.2 --library-path /opt/sfincs/lib:/opt/sfincs/local-lib /opt/sfincs/bin/sfincs "$@"

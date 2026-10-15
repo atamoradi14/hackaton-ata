@@ -1,0 +1,28 @@
+services:
+  tools:
+    build: .
+    volumes: ["./:/work"]
+    working_dir: /work
+    command: ["doctor", "--external-solver", "--output", "reports/docker-doctor.json"]
+  sfincs:
+    image: deltares/sfincs-cpu@sha256:4301bffc74f3cb3f334be5d21aa75dfe5742a16c9838942cdfc2f870859fb404
+    profiles: ["solver"]
+    network_mode: none
+    environment:
+      OMP_NUM_THREADS: "2"
+    volumes: ["./runs/synthetic/rain:/data"]
+  postgis:
+    image: postgis/postgis@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+    profiles: ["postgis"]
+    environment:
+      POSTGRES_DB: floodtwin
+      POSTGRES_USER: floodtwin
+      POSTGRES_PASSWORD: ${POSTGIS_PASSWORD:-}
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["postgis-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U floodtwin -d floodtwin"]
+      interval: 10s
+      retries: 5
+volumes:
+  postgis-data:

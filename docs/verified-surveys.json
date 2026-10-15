@@ -1,0 +1,24 @@
+{
+  "checked_on": "2026-10-14",
+  "method": "Official LINZ layer pages opened and read; browser-rendered metadata. Plain HTTP HTML is a JavaScript shell.",
+  "surveys": {
+    "121990": {
+      "title": "Auckland Part 1 LiDAR 1m DEM (2024)",
+      "url": "https://data.linz.govt.nz/layer/121990-auckland-part-1-lidar-1m-dem-2024/",
+      "vertical_datum": "NZVD2016",
+      "datum_excerpt": "Vertical datum is NZVD2016.",
+      "vertical_accuracy_spec_m_95": 0.2,
+      "capture_dates": ["2024-04-30", "2024-06-27"],
+      "license": "CC-BY-4.0"
+    },
+    "121992": {
+      "title": "Auckland Part 1 LiDAR 1m DSM (2024)",
+      "url": "https://data.linz.govt.nz/layer/121992-auckland-part-1-lidar-1m-dsm-2024/",
+      "vertical_datum": "NZVD2016",
+      "datum_excerpt": "Vertical datum is NZVD2016.",
+      "vertical_accuracy_spec_m_95": 0.2,
+      "capture_dates": ["2024-04-30", "2024-06-27"],
+      "license": "CC-BY-4.0"
+    }
+  }
+}

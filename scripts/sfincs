@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+set -euo pipefail
+exec docker run --rm --network none --env OMP_NUM_THREADS=2 --mount "type=bind,source=$(pwd),target=/data" deltares/sfincs-cpu@sha256:4301bffc74f3cb3f334be5d21aa75dfe5742a16c9838942cdfc2f870859fb404

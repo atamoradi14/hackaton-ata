@@ -1,0 +1,9 @@
+[mcp_servers.playwright_floodtwin]
+command = "npx.cmd"
+args = ["-y", "@playwright/mcp@0.0.83", "--headless", "--isolated", "--executable-path", "C:/Users/AtaMoradi/AppData/Local/ms-playwright/chromium-1248/chrome-win64/chrome.exe"]
+startup_timeout_sec = 60
+
+[mcp_servers.github_floodtwin]
+command = "python.exe"
+args = ["C:/Users/AtaMoradi/Desktop/hackathone/auckland_flood_codex_plan/scripts/github-mcp.py"]
+startup_timeout_sec = 60
