@@ -192,7 +192,7 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                         self.json(dict(result, address=job["site"]["address"]))
                     elif len(parts) == 5 and parts[4] == "points":
                         from ..terrain.display_points import presentation
-                        key=(identifier,'display-points-v1')
+                        key=(identifier,'display-points-full-v2')
                         if key not in asset_cache:
                             asset_cache[key]=presentation(folder,job['site'])
                         self.json(asset_cache[key])

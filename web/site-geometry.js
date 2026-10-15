@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {Line2} from 'three/addons/lines/Line2.js';
 import {LineGeometry} from 'three/addons/lines/LineGeometry.js';
 import {LineMaterial} from 'three/addons/lines/LineMaterial.js';
+const aerialColors=new WeakMap(); // Runtime-only; do not inflate exported glTF extras.
 
 // Both viewers use the same local frame: east, elevation, minus north.
 export const localPosition=(x,n,z,base=0)=>[x,z-base,-n];
@@ -88,6 +89,23 @@ export function classifiedCloud(cloud,base=0){
   const group=new THREE.Group();group.name='Classified LiDAR';
   for(const [name,select] of [['buildings',c=>c===6],['vegetation',c=>c>=3&&c<=5],['other',c=>c!==6&&!(c>=3&&c<=5)&&c!==2],['ground',c=>c===2]]){
     const positions=[],colors=[],color=new THREE.Color();cloud.points.forEach(([x,n,z],i)=>{if(!select(cloud.classification[i]))return;positions.push(...localPosition(x,n,z,base));const rgb=cloud.colors[i];color.setRGB(rgb[0]/255,rgb[1]/255,rgb[2]/255,THREE.SRGBColorSpace);colors.push(color.r,color.g,color.b);});
-    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeBoundingSphere();const points=new THREE.Points(geo,new THREE.PointsMaterial({vertexColors:true,size:1.8,sizeAttenuation:false}));points.name=name;points.visible=name!=='ground';group.add(points);
+    const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geo.computeBoundingSphere();
+    const material=new THREE.PointsMaterial({vertexColors:true,size:2,sizeAttenuation:false});
+    material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif (distance(gl_PointCoord, vec2(0.5)) > 0.5) discard;');};
+    const points=new THREE.Points(geo,material);points.name=name;aerialColors.set(points,geo.getAttribute('color').array);group.add(points);
   }return group;
+}
+export function colorCloud(group,mode,data,base=0){
+  const palette={buildings:'#a4b7d2',vegetation:'#5fbd77',other:'#ffb849',ground:'#b4af9c'},color=new THREE.Color();
+  for(const object of group.children){
+    const geometry=object.geometry;
+    if(mode==='aerial'){geometry.setAttribute('color',new THREE.BufferAttribute(aerialColors.get(object),3));continue;}
+    const positions=geometry.getAttribute('position'),colors=new Float32Array(positions.count*3);
+    for(let i=0;i<positions.count;i++){
+      if(mode==='classification')color.set(palette[object.name]);
+      else{const h=positions.getY(i)+base-groundAt(data,positions.getX(i),-positions.getZ(i));color.set(h<.3?'#6b91ab':h<1?'#48dcca':h<3?'#ffca55':h<6?'#ee884d':'#b88ee6');}
+      colors.set([color.r,color.g,color.b],i*3);
+    }
+    geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+  }
 }

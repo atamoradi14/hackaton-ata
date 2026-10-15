@@ -1,16 +1,16 @@
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {siteMeshes,classifiedCloud,groundAt,parcelPaths,EARTH_GLTF_AXES} from './site-geometry.js';
-import {CesiumWidget,Model,Cesium3DTileset,Resource,Credit,ClippingPolygon,ClippingPolygonCollection,PolylineOutlineMaterialProperty,Axis} from '@cesium/engine';
+import {CesiumWidget,Model,Cesium3DTileset,Resource,Credit,ClippingPolygon,ClippingPolygonCollection,PolylineOutlineMaterialProperty,Axis,Cesium3DTileStyle} from '@cesium/engine';
 import {Matrix4,Cartesian3,Math as CMath,BoundingSphere,HeadingPitchRange,Color,PolygonHierarchy,ArcType} from '@cesium/core';
 const $=id=>document.getElementById(id),job=new URLSearchParams(location.search).get('job');
-let viewer,data,geo,config,localModel,google,mode='simulation',state={parcel:true,flow:true,buildings:true,points:true,vegetation:true};
+let viewer,data,geo,config,localModel,google,pointSize,mode='simulation',state={parcel:true,flow:true,buildings:true,points:true,vegetation:true,ground:true,other:true,meshes:true,terrain:true,pointSize:2};
 const parcelEntities=[],flowEntities=[];
 async function api(path){const r=await fetch(path);const v=await r.json();if(!r.ok)throw Error(v.error||'Source unavailable');return v;}
 function point(x,n,z){return Matrix4.multiplyByPoint(Matrix4.fromArray(geo.model_matrix),new Cartesian3(x,n,z),new Cartesian3());}
 function camera(kind){const z=groundAt(data,0,0);viewer.camera.flyToBoundingSphere(new BoundingSphere(point(0,0,z+2),55),{duration:.6,offset:new HeadingPitchRange(CMath.toRadians(28),CMath.toRadians(kind==='top'?-89:-35),kind==='context'?550:kind==='top'?360:160)});}
 function notice(){ $('notice').textContent=config.google.enabled?'Measured LiDAR patch · Google 3D visual context available':'Measured LiDAR / aerial scene · Google 3D tiles are not configured';}
-function sync(){if(localModel){localModel.show=mode!=='neighbourhood';for(const [name,show] of [['Measured DSM roofs',state.buildings],['Display building sides',state.buildings],['buildings',state.points&&state.buildings],['vegetation',state.points&&state.vegetation],['other',state.points]]){try{localModel.getNode(name).show=show;}catch{}}}parcelEntities.forEach(e=>e.show=state.parcel&&mode!=='neighbourhood');flowEntities.forEach(e=>e.show=state.flow&&mode!=='neighbourhood');if(google){google.show=mode!=='simulation';google.clippingPolygons.enabled=mode==='hybrid';}viewer.scene.requestRender();}
+function sync(){if(localModel){localModel.show=mode!=='neighbourhood';for(const [name,show] of [['LINZ bare earth',state.terrain],['Measured DSM roofs',state.buildings&&state.meshes],['Display building sides',state.buildings&&state.meshes],['buildings',state.points&&state.buildings],['vegetation',state.points&&state.vegetation],['other',state.points&&state.other],['ground',state.points&&state.ground]]){try{localModel.getNode(name).show=show;}catch{}}const size=Math.max(1,Math.min(5,Number(state.pointSize)||2));if(size!==pointSize){pointSize=size;localModel.style=new Cesium3DTileStyle({pointSize:String(size)});}}viewer.scene.backgroundColor=Color.fromCssColorString(!state.terrain&&!state.meshes?'#0b1620':'#d8e3e7');parcelEntities.forEach(e=>e.show=state.parcel&&mode!=='neighbourhood');flowEntities.forEach(e=>e.show=state.flow&&mode!=='neighbourhood');if(google){google.show=mode!=='simulation';google.clippingPolygons.enabled=mode==='hybrid';}viewer.scene.requestRender();}
 async function loadGoogle(){
   if(!config.google.enabled)return;
   try{google=await Cesium3DTileset.fromUrl(new Resource({url:'https://tile.googleapis.com/v1/3dtiles/root.json',queryParameters:{key:config.google.browser_key},credits:[new Credit('<img src="/google-maps-credit.png" height="19" alt="Google Maps">',true)]}),{maximumScreenSpaceError:12,cacheBytes:128*1024*1024,maximumCacheOverflowBytes:32*1024*1024,showCreditsOnScreen:true});
@@ -27,7 +27,9 @@ async function start(){
   // glTF POINTS use unlit vertex colours; PointsMaterial display sizing is handled
   // by Cesium, while the same measured vertices and linear colours are retained.
   for(const object of points.children)object.material=new THREE.MeshBasicMaterial({vertexColors:true});meshes.group.add(points);
-  const binary=await new GLTFExporter().parseAsync(meshes.group,{binary:true,onlyVisible:true});const url=URL.createObjectURL(new Blob([binary],{type:'model/gltf-binary'}));
+  // Keep every class in the exported model. Visibility is a reversible UI choice,
+  // never an export-time removal of ground or sparse unclassified structures.
+  const binary=await new GLTFExporter().parseAsync(meshes.group,{binary:true,onlyVisible:false});const url=URL.createObjectURL(new Blob([binary],{type:'model/gltf-binary'}));
   try{localModel=await Model.fromGltfAsync({url,modelMatrix:Matrix4.fromArray(geo.model_matrix),upAxis:Axis[EARTH_GLTF_AXES.upAxis],forwardAxis:Axis[EARTH_GLTF_AXES.forwardAxis],allowPicking:true,credit:'LINZ LiDAR & aerial · CC BY 4.0',showCreditsOnScreen:true});viewer.scene.primitives.add(localModel);}finally{URL.revokeObjectURL(url);}
   const addLine=(path,color,width)=>{const positions=[];for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i],steps=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])));for(let j=0;j<=steps;j++){const t=j/steps,x=a[0]+(b[0]-a[0])*t,n=a[1]+(b[1]-a[1])*t;positions.push(point(x,n,groundAt(data,x,n)+.35));}}return viewer.entities.add({polyline:{positions,width,material:Color.fromCssColorString(color)}});};
   for(const path of parcelPaths(data)){

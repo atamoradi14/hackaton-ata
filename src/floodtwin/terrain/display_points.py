@@ -5,12 +5,14 @@ import numpy as np
 from PIL import Image
 
 
-def presentation(folder,site,limit=450000):
+def presentation(folder,site,limit=None):
     cloud=laspy.read(folder/'pointcloud_crop.laz')
     cls=np.asarray(cloud.classification)
     valid=~np.asarray(cloud.withheld,dtype=bool)&~np.isin(cls,[7,18])
     indices=np.flatnonzero(valid)
-    stride=max(1,int(np.ceil(len(indices)/limit)))
+    # The bounded local crop is lossless by default. Global every-Nth sampling
+    # can erase sparse fences/low structures while leaving dense trees intact.
+    stride=max(1,int(np.ceil(len(indices)/limit))) if limit else 1
     indices=indices[::stride]
     east=np.asarray(cloud.x)[indices];north=np.asarray(cloud.y)[indices]
     z=np.asarray(cloud.z)[indices];classes=cls[indices]
@@ -29,8 +31,17 @@ def presentation(folder,site,limit=450000):
         inside=(rows>=0)&(rows<image.shape[0])&(cols>=0)&(cols<image.shape[1])
         colors[inside]=image[rows[inside],cols[inside]]
         color_source='Recorded LINZ orthophoto sampled by NZTM coordinates; acquisition dates may differ from LiDAR'
+    if not len(indices):
+        raise ValueError('No usable LiDAR returns in the local crop')
+    manifest=folder/'pointcloud-manifest.json'
+    crop_bounds=json.loads(manifest.read_text()).get('bounds_nztm') if manifest.exists() else None
+    counts,numbers=np.unique(cls[valid],return_counts=True)
     return dict(points=np.round(np.column_stack([east-x,north-y,z]),3).tolist(),
                 classification=classes.tolist(),colors=colors.tolist(),sampling_stride=stride,
                 source_count=int(valid.sum()),display_count=len(indices),color_source=color_source,
+                raw_count=len(cls),excluded_count=int((~valid).sum()),
+                excluded_reason='Withheld or LAS noise classes 7/18 only; overlap and unclassified returns retained',
+                class_counts={str(int(c)):int(n) for c,n in zip(counts,numbers)},
+                crop_bounds_nztm=crop_bounds,full_density=stride==1,
                 bounds_local=[float(east.min()-x),float(north.min()-y),float(east.max()-x),float(north.max()-y)],
                 synthetic=False,datum='NZVD2016')

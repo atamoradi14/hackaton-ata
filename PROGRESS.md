@@ -927,3 +927,42 @@ solver run, data replacement or deployment. The local production-env container
 still has no GOOGLE_MAPS_BROWSER_KEY, so Google photorealistic imagery remains
 unavailable; the checked Earth scene is explicitly LINZ LiDAR/aerial data.
 Next step: user review of the corrected local Earth workspace.
+
+## Full-density LiDAR and raw-object inspection — 16 October 2026
+
+Audited the actual Kitenui crop: 800288 source records, 795851 usable after
+withheld/noise filtering. Previous presentation took every second usable point
+(397926 loaded), and ground returns were off by default. This was real display
+data loss, not a failed download. The existing crop is losslessly sourced within
+200 x 200 m; the larger aerial terrain does not imply native point coverage.
+
+Removed default stride decimation and bumped the points API cache version.
+Expose original/usable/loaded counts, class counts, exclusions and crop bounds.
+All usable classes including ground, unclassified and overlap returns are now
+loaded at native density in both viewers. Ground is enabled by default and is
+retained in Earth glTF, rather than being dropped by export visibility. Only
+withheld and noise classes 7/18 are excluded from display; raw LAZ is unchanged.
+
+Added independent mesh/terrain/unclassified controls, circular native point
+sprites, aerial/classification/height colour modes in LiDAR, Earth point-size
+control and raw-point inspection. The latter removes surfaces that can occlude
+small returns, enables all classes and offers a closer view; no fence/wall mesh
+is fabricated. Height colours use the 1 m DEM for relative visual screening,
+not surveyed wall heights. Runtime colour copies stay out of glTF extras.
+
+Checks: two synthetic LAS exclusion/full-density tests pass via a copied test
+file in the local container; asymmetric JS geometry tests also pass, including
+class-1/ground preservation and colour changes leaving positions unchanged.
+Production-env local container restarted (initial probe was before readiness;
+subsequent HTTP 200 in 5.48 s returned 795851/795851, stride 1). JS syntax,
+frontend build and `git diff --check` pass. Visually reviewed the actual full
+Kitenui crop and raw inspection in both modes, no browser console errors.
+No full suite, solver run, new survey download or cluster deployment.
+
+Caveat: these are all usable records in the local crop, not proof every physical
+fence or wall was captured or classified. Thin/occluded objects and unsurveyed
+facades cannot be recovered as measured surfaces from missing returns. Native
+roof triangulation and grey display sides remain optional approximations.
+Next step: local user review of full-density raw returns and source coverage.
+Saved visual evidence: `output/visual-review/kitenui-full-density-raw.jpg`
+(height-coloured measured returns, with mesh/terrain surfaces disabled).
