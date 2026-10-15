@@ -33,6 +33,7 @@ def main():
     commands.add_parser("fetch-discovery")
     commands.add_parser("prepare-terrain-discovery")
     commands.add_parser("fetch-pointcloud")
+    commands.add_parser("prepare-aerial")
     commands.add_parser("screen-domain")
     web = commands.add_parser("serve", help="Launch the private local address-confirmation web app")
     web.add_argument("--port", type=int, default=8765)
@@ -79,6 +80,9 @@ def main():
     if args.command == "fetch-pointcloud":
         from .terrain.pointcloud import fetch
         print(json.dumps(fetch(), indent=2))
+    if args.command == "prepare-aerial":
+        from .terrain.aerial import prepare
+        print(json.dumps(prepare(Path('data/processed/site')),indent=2))
     if args.command == "screen-domain":
         from .hydrology.screening import screen_site
         print(json.dumps(screen_site(), indent=2))

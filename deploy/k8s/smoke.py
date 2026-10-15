@@ -29,7 +29,7 @@ checks["leaflet"] = request("/vendor/leaflet.js")[0] == 200
 checks["private_env_blocked"] = request("/.env")[0] == 404
 status, raw = request("/api/bootstrap")
 bootstrap = json.loads(raw)
-checks["public_bootstrap"] = status == 200 and bootstrap["local"] is False
+checks["public_bootstrap"] = status == 200 and bootstrap["local"] is False and "solver" not in bootstrap
 headers = {"Origin":"https://daryajan.com", "X-Floodtwin-Token": bootstrap["csrf"]}
 status, raw = request("/api/search", {"address":"61 Pemberton Avenue, Bayview, Auckland"}, headers)
 candidate = json.loads(raw)
@@ -37,9 +37,10 @@ checks["verified_address_review"] = status == 200 and candidate["site"]["address
 checks["unconfirmed_exports_blocked"] = request(f"/api/jobs/{candidate['id']}/files/parcel.geojson")[0] == 404
 headers["Origin"] = "https://evil.example"
 checks["foreign_origin_blocked"] = request("/api/search", {"address":"bad"}, headers)[0] == 403
-status, raw = request("/api/lab")
-lab = json.loads(raw)
-checks["real_synthetic_lab"] = status == 200 and lab["synthetic"] and lab["real_solver"]
+page = request("/")[1]
+checks["hydraulic_ui_removed"] = all(item not in page for item in (b"hydraulic.js", b"workspace.js", b"scene.html"))
+checks["hydraulic_routes_removed"] = all(request(path)[0] == 404 for path in ("/hydraulic.js", "/workspace.js", "/scene.html", "/api/lab"))
+checks["terrain_3d_routes"] = all(request(path)[0] == 200 for path in ("/terrain3d.html", "/terrain3d.bundle.js", "/hybrid.html", "/hybrid.bundle.js"))
 (root / "reports/k8s-public-smoke.json").write_text(json.dumps(checks, indent=2))
 print(json.dumps(checks, indent=2))
 raise SystemExit(0 if all(checks.values()) else 1)

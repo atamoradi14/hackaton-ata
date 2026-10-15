@@ -33,6 +33,7 @@ STEPS = [
     ("coverage", "Survey coverage", "Intersect the actual 2024 capture areas", ["discover-elevation"], "elevation-discovery.json", []),
     ("terrain", "Ground & surface", "Aligned 1 m DEM / DSM with verified datum", ["prepare-terrain-discovery"], "terrain-qc.json", ["gis", "coverage"]),
     ("lidar", "LiDAR crop", "Bounded native point cloud and classification QC", ["fetch-pointcloud"], "pointcloud-manifest.json", ["terrain"]),
+    ("aerial", "Aerial imagery", "Recorded LINZ orthophoto crop", ["prepare-aerial"], "scene-aerial.json", ["lidar"]),
     ("profiles", "Terrain checks", "Ground consistency and two cross-sections", "site-qc.py", "ground-dem-qc.json", ["lidar", "terrain"]),
     ("screening", "Connectivity screen", "Terrain-derived only; no hydraulic water motion", ["screen-domain"], "domain-screening.json", ["terrain"]),
     ("preview", "Evidence report", "Terrain preview and source provenance", "terrain-3d.py", "terrain-3d.png", ["profiles", "screening", "buildings"]),
@@ -66,7 +67,10 @@ class Workspaces:
         args = ([sys.executable, "-m", "floodtwin.cli", *command] if isinstance(command, list)
                 else [sys.executable, str(self.root / "scripts" / command)])
         # No shell interpolation of addresses; credentials inherit privately.
-        result = subprocess.run(args, cwd=workspace, env=os.environ.copy(), capture_output=True,
+        environment = os.environ.copy()
+        source = str(self.root / "src")
+        environment["PYTHONPATH"] = source + (os.pathsep + environment["PYTHONPATH"] if environment.get("PYTHONPATH") else "")
+        result = subprocess.run(args, cwd=workspace, env=environment, capture_output=True,
                                 text=True, timeout=timeout)
         output = result.stdout + result.stderr
         for name in [key for key in os.environ if key.endswith("_KEY")]:
@@ -77,6 +81,8 @@ class Workspaces:
         logs.mkdir(exist_ok=True)
         (logs / (str(command[0] if isinstance(command, list) else command) + ".log")).write_text(output)
         if result.returncode:
+            if 'ReadTimeout' in output or 'ConnectTimeout' in output:
+                raise TimeoutError('The source server timed out. Retry preparation to continue from recorded data.')
             # Fixed public message: provider exception URLs never cross into UI.
             raise RuntimeError("Provider or processing check failed. See private job logs for details.")
 
@@ -84,6 +90,11 @@ class Workspaces:
         if not isinstance(identifier, str) or len(identifier) != 32 or any(c not in "0123456789abcdef" for c in identifier):
             raise ValueError("Invalid workspace identifier")
         return self.folder / identifier
+
+    def suggestions(self, address):
+        """Suggestions are discovery only; they never create a workspace or assign a parcel."""
+        from floodtwin.providers.address import suggest
+        return suggest(address)
 
     def search(self, address):
         if not isinstance(address, str) or not 5 <= len(address) <= 240 or len(address.split(",")) < 3:
@@ -144,9 +155,31 @@ class Workspaces:
                 raise
             return copy.deepcopy(job)
 
-    def prepare_managed(self, identifier):
+    def retry_preparation(self, identifier):
+        with self.lock:
+            job=self.get(identifier)
+            if not job['site'].get('user_visual_confirmation'):
+                raise ValueError('Confirm the property first')
+            if job['status']=='preparing':
+                return self.public(job)
+            if not self.slots.acquire(blocking=False):
+                raise BusyError('Processing capacity reached')
+            try:
+                job['status']='preparing'
+                previous={step['id']:step for step in job['steps']}
+                job['steps']=[dict(previous.get(s[0],dict(id=s[0],name=s[1],description=s[2])),status='queued') for s in STEPS]
+                job['events'].append(dict(time=stamp(),message='Retry requested; recorded artifacts will be reused.'))
+                self.save(job)
+                self.jobs[identifier]=job
+                threading.Thread(target=self.prepare_managed,args=(identifier,True),daemon=True).start()
+                return self.public(job)
+            except Exception:
+                self.slots.release()
+                raise
+
+    def prepare_managed(self, identifier, reuse_existing=False):
         try:
-            self.prepare(identifier)
+            self.prepare(identifier,reuse_existing=reuse_existing)
         finally:
             self.slots.release()
 
@@ -166,7 +199,7 @@ class Workspaces:
                     for step in job["steps"]:
                         if step["status"] in {"queued", "running"}:
                             step.update(status="blocked", detail="Preparation interrupted by a server restart.")
-                    job["events"].append(dict(time=stamp(), message="Server restarted before preparation finished. Search and confirm again to resume in a new workspace."))
+                    job["events"].append(dict(time=stamp(), message="Server restarted before preparation finished. Retry blocked data to resume this confirmed workspace."))
                     self.save(job)
             if not job:
                 raise ValueError("Confirmed workspace not found")
@@ -180,7 +213,7 @@ class Workspaces:
             job["events"].append(dict(time=stamp(), message=f"{record['name']}: {detail}"))
             self.save(job)
 
-    def prepare(self, identifier):
+    def prepare(self, identifier, reuse_existing=False):
         directory = self.directory(identifier)
         local = directory / "data/processed/site"
         try:
@@ -203,7 +236,7 @@ class Workspaces:
                     continue
                 self.update(identifier, step, "running", "Checking source coverage and recorded artifacts…")
                 try:
-                    if cached and (local / artifact).exists():
+                    if (cached or reuse_existing) and (local / artifact).exists():
                         status, detail = "cached", "Reused recorded data for this exact address and parcel."
                     else:
                         self.execute(directory, command)
@@ -218,6 +251,9 @@ class Workspaces:
                         self.execute(directory, "site-overview.py")
                     statuses[step] = status
                     self.update(identifier, step, status, detail)
+                except (TimeoutError,subprocess.TimeoutExpired):
+                    statuses[step] = 'blocked'
+                    self.update(identifier,step,'blocked','Source request timed out. Retry to continue from recorded data.')
                 except Exception:
                     statuses[step] = "blocked"
                     self.update(identifier, step, "blocked", "Source access, verified coverage or processing needs attention. See private logs.")

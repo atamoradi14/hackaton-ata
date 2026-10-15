@@ -2,7 +2,7 @@ FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b533
 WORKDIR /frontend
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
-COPY web/scene.js web/hydraulic.js web/hybrid.js web/hybrid-model.js web/build.mjs ./
+COPY web/scene.js web/terrain3d.js web/terrain-workspace.js web/site-geometry.js web/hydraulic.js web/hybrid.js web/hybrid-model.js web/build.mjs ./
 RUN npm run build
 
 FROM deltares/sfincs-cpu@sha256:4301bffc74f3cb3f334be5d21aa75dfe5742a16c9838942cdfc2f870859fb404 AS solver
@@ -20,6 +20,7 @@ COPY --chown=$MAMBA_USER:$MAMBA_USER src /work/src
 COPY --chown=$MAMBA_USER:$MAMBA_USER web /work/web
 COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/node_modules /work/web/node_modules
 COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/scene.bundle.js /work/web/scene.bundle.js
+COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/terrain3d.bundle.js /work/web/terrain3d.bundle.js
 COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/hybrid.bundle.js /work/web/hybrid.bundle.js
 COPY --chown=$MAMBA_USER:$MAMBA_USER scripts /work/scripts
 COPY --chown=$MAMBA_USER:$MAMBA_USER docs /work/docs

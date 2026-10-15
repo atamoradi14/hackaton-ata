@@ -4,8 +4,7 @@ export function terrainGLB(data, imageURL, stride=2) {
   let bytes=0;
   const gltf={asset:{version:'2.0',generator:'Auckland FlowLab · measured terrain',extras:{datum:data.datum,sources:data.sources,display_sampling_m:stride*g.cell_m}},
     scene:0,scenes:[{nodes}],nodes:[],meshes,extensionsUsed:['KHR_materials_unlit'],materials:[
-      {name:'LINZ acquired aerial',extensions:{KHR_materials_unlit:{}},pbrMetallicRoughness:{baseColorTexture:{index:0},metallicFactor:0,roughnessFactor:1},doubleSided:true},
-      {name:'Approximate facades',pbrMetallicRoughness:{baseColorFactor:[.76,.74,.68,1],metallicFactor:0,roughnessFactor:1},doubleSided:true}],
+      {name:'LINZ acquired aerial',extensions:{KHR_materials_unlit:{}},pbrMetallicRoughness:{baseColorTexture:{index:0},metallicFactor:0,roughnessFactor:1},doubleSided:true}],
     textures:[{source:0,sampler:0}],samplers:[{magFilter:9729,minFilter:9729,wrapS:33071,wrapT:33071}],images:[{uri:imageURL}],
     buffers:[{byteLength:0}],bufferViews:views,accessors};
   function array(value,type,components,target){
@@ -33,18 +32,6 @@ export function terrainGLB(data, imageURL, stride=2) {
   for(const r of rows)for(const c of cols){p.push(g.west+(c+.5)*g.cell_m,g.elevations[r*g.cols+c],-g.north+(r+.5)*g.cell_m);uv.push((c+.5)/g.cols,(r+.5)/g.rows);}
   for(let r=0;r<rows.length-1;r++)for(let c=0;c<cols.length-1;c++){const a=r*cols.length+c,b=a+1,d=a+cols.length,e=d+1;indices.push(a,d,b,b,d,e);}
   mesh('Measured bare earth · display sampling '+stride+' m',p,uv,indices);
-  const fallbackP=[],fallbackUV=[],fallbackI=[];
-  for(let r=0;r<g.rows-1;r++)for(let c=0;c<g.cols-1;c++){
-    const a=r*g.cols+c,b=a+1,d=a+g.cols,e=d+1;
-    if(![a,b,d,e].every(i=>g.buildings[i])||[a,b,d,e].some(i=>g.native_roofs[i]))continue;
-    const start=fallbackP.length/3;for(const i of [a,b,d,e]){const rr=Math.floor(i/g.cols),cc=i%g.cols;fallbackP.push(g.west+(cc+.5)*g.cell_m,g.surfaces[i],-g.north+(rr+.5)*g.cell_m);fallbackUV.push((cc+.5)/g.cols,(rr+.5)/g.rows);}fallbackI.push(start,start+2,start+1,start+1,start+2,start+3);
-  }
-  mesh('Approximate DSM roof fallbacks',fallbackP,fallbackUV,fallbackI);
-  const rp=[],ru=[],ri=[];
-  for(const roof of data.roof_meshes){const start=rp.length/3;for(let i=0;i<roof.vertices.length;i+=3){const [x,n,z]=roof.vertices.slice(i,i+3);rp.push(x,z,-n);ru.push((x-g.west)/(g.cols*g.cell_m),(g.north-n)/(g.rows*g.cell_m));}for(const i of roof.triangles)ri.push(start+i);}
-  mesh('QA-filtered classified LiDAR roofs',rp,ru,ri);
-  const fp=[],fi=[];for(const ring of data.facade_rings){const start=fp.length/3;for(const [x,n,b,t] of ring)fp.push(x,b,-n,x,t,-n);for(let i=0;i<ring.length-1;i++){const a=start+i*2;fi.push(a,a+1,a+2,a+2,a+1,a+3);}}
-  mesh('Approximate building facades',fp,[],fi,1);
   if(!data.imagery){delete gltf.images;delete gltf.textures;delete gltf.samplers;delete gltf.materials[0].pbrMetallicRoughness.baseColorTexture;gltf.materials[0].pbrMetallicRoughness.baseColorFactor=[.44,.57,.42,1];}
   gltf.buffers[0].byteLength=bytes;
   const json=new TextEncoder().encode(JSON.stringify(gltf)),jsonSize=Math.ceil(json.length/4)*4,total=12+8+jsonSize+8+bytes;

@@ -56,7 +56,7 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Cache-Control", "no-store")
             self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
-            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.googleapis.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self' blob: https://tile.googleapis.com; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; base-uri 'none'")
+            self.send_header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.googleapis.com https://*.basemaps.cartocdn.com https://tile.openstreetmap.org; connect-src 'self' blob: https://tile.googleapis.com; worker-src 'self' blob:; frame-src 'self' https://www.google.com; frame-ancestors 'self'; base-uri 'none'")
             self.end_headers()
             self.wfile.write(body)
 
@@ -78,18 +78,33 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     raise ValueError("A JSON object is required")
                 if self.path == "/api/search":
                     self.json(manager.search(data.get("address")))
+                elif self.path == "/api/address-suggestions":
+                    self.json({"suggestions": manager.suggestions(data.get("address"))})
                 elif self.path == "/api/confirm":
                     job = manager.confirm(data.get("id"), data.get("address", ""), data.get("confirmed"))
                     self.json(manager.public(job), 202)
-                elif self.path.startswith('/api/jobs/') and self.path.endswith('/comparison'):
-                    self.json(manager.compare(self.path.split('/')[3], data.get('baseline'), data.get('modified')))
+                elif self.path.startswith('/api/jobs/') and self.path.endswith('/retry-preparation'):
+                    identifier=self.path.split('/')[3]
+                    self.json(manager.retry_preparation(identifier),202)
+                elif self.path.startswith('/api/jobs/') and self.path.endswith('/prepare-visuals'):
+                    identifier=self.path.split('/')[3]
+                    manager.get(identifier)
+                    from ..terrain.aerial import prepare
+                    folder=manager.directory(identifier)/'data/processed/site'
+                    with manager.lock:
+                        report=prepare(folder)
+                        # Cached geometry remains valid; only the imagery metadata changes.
+                        cache=read_json(folder/'scene.json')
+                        if cache:
+                            cache['imagery']=report
+                            (folder/'scene.json').write_text(json.dumps(cache))
+                        asset_cache.pop((identifier,'display-points-v1'),None)
+                    self.json(dict(ready=True))
                 elif self.path.startswith('/api/jobs/') and self.path.endswith('/source-check'):
                     identifier = self.path.split('/')[3]
                     manager.get(identifier)
                     from .freshness import status
                     self.json(status(manager.directory(identifier)/'data/processed/site', check=True))
-                elif self.path.startswith('/api/jobs/') and self.path.endswith('/walls'):
-                    self.json(manager.save_walls(self.path.split('/')[3], data.get('walls')))
                 elif self.path.startswith('/api/jobs/') and self.path.endswith('/spatial'):
                     import math
                     import rasterio
@@ -118,15 +133,12 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                             lon,lat=to_wgs.transform(east,north)
                             samples.append(dict(local=[east-x,north-y],ground_m=float(z),latlon=[lat,lon]))
                     self.json(dict(points=samples,datum='NZVD2016',source='nearest measured 1 m DEM sample'))
-                elif self.path.startswith("/api/jobs/") and self.path.endswith("/hydraulics"):
-                    identifier = self.path.split("/")[3]
-                    self.json(manager.start_hydraulics(identifier, data), 202)
                 else:
                     self.json({"error": "Route not found"}, 404)
             except ValueError as error:
                 self.json({"error": str(error)}, 400)
             except BusyError:
-                self.json({"error": "The processing slot is busy with preparation or simulation. Wait for that job to finish, then try again."}, 409)
+                self.json({"error": "The processing slot is busy with preparation. Wait for that job to finish, then try again."}, 409)
             except Exception:
                 self.json({"error": "The official address/parcel could not be resolved unambiguously. Check the full address and source access."}, 422)
 
@@ -142,7 +154,7 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                 if path == "/api/bootstrap":
                     site = read_json(root / "data/processed/site/site_manifest.json", {})
                     self.json(dict(csrf=token, default_address=site.get("address", ""), name="Auckland FlowLab",
-                                   local=not bool(public_origin), solver="SFINCS 2.4.0", horizontal_crs="EPSG:2193", vertical_datum="NZVD2016"))
+                                   local=not bool(public_origin), horizontal_crs="EPSG:2193", vertical_datum="NZVD2016"))
                     return
                 if path == '/api/viewer-config':
                     # This key is deliberately public and must be HTTP-referrer/API restricted.
@@ -150,14 +162,6 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     key = os.environ.get('GOOGLE_MAPS_BROWSER_KEY', '').strip()
                     self.send(json.dumps(dict(google=dict(enabled=bool(key), browser_key=key or None),
                         cesium_version='1.146.0', google_capture_date=None)).encode(), 'application/json')
-                    return
-                if path == "/api/lab":
-                    from .assets import lab
-                    if "lab" not in asset_cache:
-                        asset_cache["lab"] = lab(root)
-                    public = dict(asset_cache["lab"])
-                    public.pop("report_directory", None)
-                    self.json(public)
                     return
                 if path.startswith("/api/jobs/"):
                     parts = path.split("/")
@@ -179,26 +183,19 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                         from .freshness import status
                         self.json(status(folder))
                     elif len(parts) == 5 and parts[4] == "scene":
-                        from ..terrain.scene import build
+                        from ..terrain.scene import build, SCENE_VERSION
                         cache = folder / "scene.json"
                         with manager.lock:
                             result = read_json(cache) if cache.exists() else build(folder)
-                            if not result or result.get("version") != 6:
+                            if not result or result.get("version") != SCENE_VERSION:
                                 result = build(folder)
                         self.json(dict(result, address=job["site"]["address"]))
                     elif len(parts) == 5 and parts[4] == "points":
-                        import laspy
-                        import numpy as np
-                        cloud = laspy.read(folder / "pointcloud_crop.laz")
-                        stride = max(1, (len(cloud.points)+59999)//60000)
-                        x,y = job["site"]["nztm"]
-                        xyz = np.stack([np.asarray(cloud.x)[::stride]-x, np.asarray(cloud.y)[::stride]-y, np.asarray(cloud.z)[::stride]], axis=1)
-                        self.json(dict(synthetic=False, points=np.round(xyz,3).tolist(), sampling_stride=stride,
-                                       classification=np.asarray(cloud.classification)[::stride].tolist()))
-                    elif len(parts) in {5,6} and parts[4] == "hydraulics":
-                        self.json(manager.hydraulics(identifier, parts[5] if len(parts)==6 else None))
-                    elif len(parts) == 5 and parts[4] == 'walls':
-                        self.json(read_json(manager.directory(identifier)/'walls.json', dict(walls=[])))
+                        from ..terrain.display_points import presentation
+                        key=(identifier,'display-points-v1')
+                        if key not in asset_cache:
+                            asset_cache[key]=presentation(folder,job['site'])
+                        self.json(asset_cache[key])
                     elif len(parts) == 6 and parts[4] == "layers":
                         from .assets import layer
                         key = (identifier, parts[5])
@@ -222,7 +219,11 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                         self.json({"error": "Artifact not available"}, 404)
                     return
                 static = {"/": root / "web/index.html", "/app.js": root / "web/app.js", "/style.css": root / "web/style.css"}
-                static.update({"/"+name: root/"web"/name for name in ["scene.html", "studio.css", "scene.bundle.js", "hydraulic.js", "workspace.js", "workspace.css", "hybrid.html", "hybrid.css", "hybrid.js", "hybrid-model.js", "hybrid.bundle.js", "google-maps-credit.png"]})
+                static.update({"/"+name: root/"web"/name for name in ["terrain3d.html", "terrain3d.bundle.js", "studio.css", "hybrid.html", "hybrid.css", "hybrid.bundle.js", "hybrid-model.js", "google-maps-credit.png"]})
+                static.update({'/terrain3d.html':root/'web/terrain-workspace.html',
+                               '/hybrid.html':root/'web/terrain-workspace.html',
+                               '/earth-context.html':root/'web/hybrid.html',
+                               '/terrain-workspace.css':root/'web/terrain-workspace.css'})
                 vendor = root / "web/node_modules/leaflet/dist"
                 if path.startswith('/vendor/cesium/'):
                     base = (root/'web/node_modules/cesium/Build/Cesium').resolve()

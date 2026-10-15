@@ -2,5 +2,6 @@
 
 /* Preserve readable branding on narrow screens. */
 @media(max-width:600px){header{flex-wrap:wrap;height:auto;min-height:90px}header>a{font-size:20px;width:100%;line-height:1.1}header button{flex:1}}
+header>a:not(:first-child){background:#25383e;color:#e5efdf;border:1px solid #435b60;padding:10px 14px;border-radius:6px;text-decoration:none;font:13px system-ui,sans-serif;margin:0}header>a:not(:first-child):hover{background:#36515a}
 
 .embedded header,.embedded aside,.embedded footer{display:none}.embedded main{display:block;height:100dvh}.embedded #viewport{height:100dvh;min-height:0}.embedded .scene-tag{font-size:9px;max-width:70%}.embedded .scale-note{display:none}.scene-legend{position:absolute;left:18px;bottom:18px;z-index:1;font-size:11px;color:white;background:#14252bea;padding:10px;border-radius:6px;border-top:5px solid #2289bd}.embedded .view-buttons{top:auto;bottom:80px}.embedded .readout{bottom:55px;font-size:10px}.embedded .scene-legend{max-width:85%;font-size:10px}

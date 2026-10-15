@@ -721,3 +721,209 @@ Updated how-to-deploy.md, tracked app/init image references and upgrade report t
 the deployed release. Evidence is reports/earth-production-{release,validation}.json
 and output/playwright/earth-production-*. Previous SSH blocker is resolved. Google
 live coverage/alignment and the documented scientific validation gates remain.
+
+## Address type-ahead and alphanumeric address fix — 15 October 2026
+
+Fixed the interactive address entry path without changing the official-match, parcel
+review, or explicit-confirmation gates. The exact resolver previously accepted only
+numeric street numbers and compared a trailing postcode as if it were part of the
+town/city, so `2A Toroa Terrace, Mount Albert, Auckland 1025` could fail before a
+LINZ lookup. It now accepts an alphanumeric unit/house suffix and strips an optional
+four-digit postcode before the exact official query.
+
+Added a 250 ms debounced, bounded LINZ type-ahead endpoint and selection list. A
+suggestion only fills the input; selecting it still executes the existing exact
+official address + point-covering parcel lookup and requires explicit visual
+confirmation before preparation. The local workspace subprocess now exposes this
+checkout's `src` path to its CLI child process, preventing a local-only
+`ModuleNotFoundError` during lookup.
+
+Focused checks only (no full test run): WSL pinned environment ran 3 relevant tests
+(`tests/test_address_input.py` plus the isolated workspace search guard), JavaScript
+syntax and `git diff --check` passed. Live local API smoke: `2A Toroa` returned the
+official `2A Toroa Terrace, Mount Albert, Auckland` suggestion; selected exact
+address resolved with `official_exact_match=true` and remained unconfirmed. The
+Playwright CLI could not launch because WSL has no Chromium distribution; no browser
+installation was performed. No solver, terrain preparation, site simulation, or
+production deployment was run.
+
+## Terrain-and-evidence-only app surface — 15 October 2026
+
+At the user's request, removed the app's hydraulic/simulation surface without
+deleting source model code, saved native runs, inputs, or research data. The public
+app no longer loads hydraulic/workspace scripts, solver lab, rainfall forms, wall
+controls, saved-result layers, comparison/swipe controls, time playback, 3D/split
+hydraulic views, or associated animation. The server no longer exposes the public
+routes that start, list, read, compare, or save hydraulic runs/walls; it no longer
+advertises a solver in bootstrap data. Address search, explicit parcel confirmation,
+terrain profiles, and bounded GIS/evidence exports remain.
+
+Focused checks completed: JavaScript syntax, Python API compilation and
+`git diff --check` passed. A restarted local app returned bootstrap data without a
+solver, its homepage contained no hydraulic assets/copy, and the former
+`/hydraulic.js`, `/workspace.js`, `/scene.html`, and `/api/lab` entry points each
+returned 404. No production deployment or full test run was requested or performed.
+
+## Terrain-and-evidence-only production release — 15 October 2026
+
+Deployed `terrain-evidence-20261015-r1` to `https://daryajan.com` after building
+local image `sha256:bfc9910fde4044277e1dcf79b9a86565b31ebf503a2c57098549c240d3ff150a`.
+The first resumable SFTP attempt produced a checksum mismatch and was not imported;
+a clean retry completed with verified archive SHA256 before containerd import. The
+server-side release helper enforced the idle gate, created a 1.2 GB consistent
+workspace backup, preserved all recorded native artifact hashes, retained both
+previous `earth-20261015-r1` image references for rollback, and rolled out the new
+app pod Ready with zero restarts. Caddy, provider Secrets, TLS, PVCs and resource
+limits were unchanged.
+
+Focused public checks passed: health, homepage, Leaflet, public bootstrap without a
+solver, exact address review, unconfirmed export denial, foreign-origin denial,
+terrain-source access, unknown-workspace denial, no hydraulic page assets/copy, and
+404 responses from former hydraulic/workspace/scene/lab endpoints. No full Python
+suite, new preparation task, solver run, or saved-data mutation was performed.
+
+## Terrain 3D correction production release — 15 October 2026
+
+Restored the two terrain-only 3D entry points requested by the user: the native
+LiDAR/property viewer (`terrain3d.html`) and the Earth/Google-context viewer
+(`hybrid.html`). They load the existing terrain, building, parcel, point and imagery
+evidence APIs only; the hydraulic UI, solver, rainfall/animation controls and former
+hydraulic routes remain removed. The Earth viewer retains its explicit provider-state
+handling. Google visual context is restored as a UI capability, but live Google
+content remains unavailable until a valid browser key is configured.
+
+Deployed `terrain-3d-20261015-r2` using image manifest
+`sha256:28bd6a6a6b7b38b0894a8fc457933194d521333afb0fc377c2463b03c48c17eb`.
+The release helper recorded the prior terrain-evidence image, retained the recorded
+native artifact hashes, and the new pod is Ready with zero restarts. Focused public
+verification passed: health, address review protections, `/terrain3d.html`,
+`/terrain3d.bundle.js`, `/hybrid.html` and `/hybrid.bundle.js` all return 200;
+`/hydraulic.js`, `/workspace.js`, `/scene.html` and `/api/lab` return 404. No full
+test suite, new solver run, or saved-data mutation was performed.
+
+## One-window 3D visual review — 15 October 2026
+
+Paused the next production rollout after visual review found that the first
+terrain-only correction was clean but not an adequate all-in-one presentation.
+The local review container is running only on `127.0.0.1:8774`; production remains
+on `terrain-3d-fix-20261015-r1`. It renders the actual orthophoto/1 m LiDAR terrain,
+official building footprints as bounded DSM-median volumes, official parcel outline,
+Council mapped overland-flow paths, LiDAR candidates and native point-cloud toggle in
+one workspace. The former corrupt roof/facade triangulation is removed.
+
+Focused local validation: image built, server health returned OK, scene rebuilt from
+the selected workspace and browser review showed 113 LiDAR-derived building volumes
+and 24 Council flow paths together. No full suite and no production deployment was
+performed. Embedded Google 3D/Street View remains a provider-key/coverage gate; the
+same workspace has direct Google Earth and Street View launch controls pending a
+configured browser key for an in-app Google layer.
+
+## Shared 3D renderer, alignment and visual review — 16 October 2026
+
+Replaced the mirrored footprint extrusion with a shared coordinate contract
+`east, elevation, -north` for both Three.js and Cesium. Both public 3D routes now
+open one workspace with LiDAR, georeferenced Earth context and Street View tabs.
+The homepage opens that workspace in the same tab. Removed hydraulic rendering
+code from the Earth bundle; the previously removed hydraulic APIs remain removed.
+
+Fixed the missing-imagery pipeline: preparation includes a bounded official LINZ
+orthophoto crop and an existing-workspace preparation action. Acquired the actual
+Kitenui crop locally and verified its bounds exactly match the scene. Correct sRGB
+input/output and unlit imagery avoid the prior washed-out aerial material. Roofs
+use quality-filtered class-6 native returns, not flat blocks or unsupported DSM
+vegetation over building outlines. Kitenui has 53 supported roof meshes; Pemberton
+has 27. Neutral display sides close roof boundaries to measured ground without
+inventing facade detail. Wider context remains aerial/DEM where point coverage is
+absent. Source point crops cover 200 m; ground/imagery context covers 320 m.
+
+Classified points are bounded to 450000 displayed returns, excluding withheld/noise,
+with actual source heights and orthophoto colours sampled in NZTM. Local browser
+review loaded 397926 Kitenui and 259552 Pemberton returns. Trees, roofs, ground,
+parcel and mapped Council flow paths have explicit layer controls. Flow paths are
+clipped and sampled against terrain at 1 m spacing to avoid floating line chords.
+
+Executed: frontend build, JS/Python syntax, `git diff --check`, asymmetric geometry
+fixture (northing/UV/roof isolation/interpolation), 2 focused address tests, and the
+focused roof outlier/footprint-hole test (1 passed). Local API type-ahead and exact
+Kitenui lookup succeeded with private `.env` inherited by the container. Numerical
+globe-frame residual for Kitenui was 5.478 mm; this is not independent source
+alignment validation. Visually reviewed both renderers, top/property views,
+vegetation toggling, and Street View's honest missing-provider state in Edge.
+Evidence is in `output/visual-review/`. No full test suite or solver run was used.
+
+Local review runs at `http://127.0.0.1:8774` in `floodtwin-3d-local-review`, with
+source/web mounts for the reviewed changes. No cluster deployment was performed
+for this correction. Google live tiles and embedded Street View remain blocked
+by the missing browser-key configuration, so live Google coverage is unverified.
+Official Three.js colour-management/glTF and Google Embed documentation informed
+the shared-frame, colour-space and provider-state implementation.
+
+## Local production environment and Lloyd recovery — 16 October 2026
+
+Diagnosed the Lloyd preparation failure from its private worker log: a 60-second
+read timeout fetching LINZ public elevation STAC item metadata. It was not an
+address-match failure. Later steps were blocked by the terrain dependency.
+
+Recreated only the loopback review container with `--env-file .env.production`;
+kept source/web/data mounts and explicitly overrode the app origin to
+`http://127.0.0.1:8774`. No secret values were printed, copied into source or served.
+No cluster changes were performed. Added bounded transient GET retries, a shared
+URL-keyed metadata cache, and reuse of recorded public STAC items only when their
+SHA256 matches the collection's advertised checksum. No other site's geodata is
+borrowed. Documented the current container configuration in `docs/LOCAL_APP.md`.
+
+Added confirmed-workspace preparation retry, completed-artifact reuse, duplicate
+worker prevention and slot release on failure. UI now offers Retry blocked data,
+counts only ready steps for progress, and gates the 3D link on actual terrain and
+point-cloud files. Resumed the existing confirmed Lloyd workspace: all 9 steps are
+now done/cached with zero blocked. The real scene has aerial imagery, 57 supported
+class-6 roof meshes and 36 mapped flow paths; browser loaded 417173 non-noise
+classified returns. Visually verified the restored 9/9 homepage and 3D scene, with
+no browser console errors. Screenshots: `output/visual-review/lloyd-*.jpg`.
+
+Verification: 4 focused workspace failure/retry tests passed (14 deselected),
+JavaScript/Python syntax and `git diff --check` passed. No full suite or solver run.
+
+## Selected-property 3D boundary — 16 October 2026
+
+Replaced the easily occluded one-pixel parcel line with a yellow, dark-cased,
+fixed-pixel selection outline and light parcel shading. The LiDAR outline is
+drawn over objects; Earth uses the same explicitly closed, DEM-sampled ring with
+a depth-fail outline so trees/buildings cannot hide the selected extent. Both
+remain controlled by Confirmed parcel. No cadastral coordinates, terrain or
+building measurements changed. This is a display selection, not a fence/wall.
+
+Verification: `node tests/web-geometry.mjs` passed the existing frame/roof checks
+and added parcel closure, ground sampling, immutability and overlay checks.
+`npm --prefix web run build`, targeted JS syntax checks and `git diff --check`
+passed. Visually checked the real, prepared Lloyd workspace locally in both
+LiDAR and georeferenced Earth views, including parcel on/off; no console errors.
+Screenshots: `output/visual-review/lloyd-boundary.jpg` and
+`output/visual-review/lloyd-earth-boundary.jpg`. Google live photorealistic tiles
+remain unverified without a browser key. No full tests, hydraulics or deployment.
+Next step: user review of the local selected-property presentation.
+
+## Earth axis alignment and thin parcel boundary — 16 October 2026
+
+Found an actual Earth model/overlay registration bug in the Cesium glTF loader's
+default forward-axis correction. The shared mesh is (east, height, -north), but
+default Y-up/Z-forward transformed a test point (17, 12, -83) to (-83, 17, 12),
+while parcel/flow entities use (17, 83, 12). Explicit Y-up/X-forward now applies
+only the necessary up-axis conversion. No source coordinates, survey heights or
+geoid transform changed. Cesium's official Model axis documentation and the
+installed 1.146.0 ModelUtility implementation were checked.
+
+Reduced the boundary to a 2 px yellow line with a 0.5 px dark casing on each side
+in both modes, with quieter 6% shading. The selection remains visible through
+objects and is not a physical wall.
+
+Checks: `node tests/web-geometry.mjs` passes, including three asymmetric points
+through the installed Cesium axis-conversion implementation and explicit line
+width assertions. `npm --prefix web run build`, `node --check web/hybrid.js`
+and `git diff --check` passed. Visually checked the real Lloyd scene locally:
+Earth oblique/top alignment and thin LiDAR boundary, no browser console errors.
+Screenshot: `output/visual-review/lloyd-earth-aligned-thin.jpg`. No full tests,
+solver run, data replacement or deployment. The local production-env container
+still has no GOOGLE_MAPS_BROWSER_KEY, so Google photorealistic imagery remains
+unavailable; the checked Earth scene is explicitly LINZ LiDAR/aerial data.
+Next step: user review of the corrected local Earth workspace.

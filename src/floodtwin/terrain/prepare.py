@@ -2,11 +2,15 @@
 import hashlib
 import json
 import math
+import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from urllib.parse import urljoin
 import numpy as np
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import rasterio
 from rasterio.merge import merge
 from pyproj import Transformer
@@ -27,14 +31,48 @@ def prepare():
     query_box = box(min(lonmin, lonmax), min(latmin, latmax), max(lonmin, lonmax), max(latmin, latmax))
     folder = Path("data/raw/terrain-metadata")
     folder.mkdir(parents=True, exist_ok=True)
-    def get(url, filename):
+    shared=Path(os.environ.get('FLOODTWIN_METADATA_CACHE','data/raw/terrain-metadata'))
+    shared.mkdir(parents=True,exist_ok=True)
+    clients=threading.local()
+    def client():
+        if not hasattr(clients,'session'):
+            session=requests.Session()
+            session.mount('https://',HTTPAdapter(max_retries=Retry(total=2,connect=2,read=2,status=2,
+                backoff_factor=.5,status_forcelist=[429,500,502,503,504],allowed_methods=['GET'])))
+            clients.session=session
+        return clients.session
+    def get(url, filename, checksum=None):
+        def checked(content):
+            if checksum and checksum.startswith('1220') and hashlib.sha256(content).hexdigest()!=checksum[4:]:
+                raise RuntimeError('STAC metadata checksum mismatch')
+            return json.loads(content)
         path = folder / filename
         if path.exists():
-            return json.loads(path.read_text())
-        response = requests.get(url, timeout=60)
+            return checked(path.read_bytes())
+        cached=shared/(hashlib.sha256(url.encode()).hexdigest()+'.json')
+        if cached.exists():
+            content=cached.read_bytes()
+            result=checked(content)
+            path.write_bytes(content)
+            return result
+        # Reuse a previously downloaded public metadata item only when its hash
+        # matches this collection's advertised SHA256. No property data is reused.
+        recorded=Path(__file__).resolve().parents[3]/'data/raw/terrain-metadata'/filename
+        if checksum and checksum.startswith('1220') and recorded.exists():
+            content=recorded.read_bytes()
+            if hashlib.sha256(content).hexdigest()==checksum[4:]:
+                result=checked(content)
+                path.write_bytes(content)
+                cached.write_bytes(content)
+                return result
+        response = client().get(url, timeout=(15,60))
         response.raise_for_status()
+        result=checked(response.content)
         path.write_bytes(response.content)
-        return response.json()
+        temporary=cached.with_name(cached.name+'.'+str(threading.get_ident())+'.tmp')
+        temporary.write_bytes(response.content)
+        temporary.replace(cached)
+        return result
     reports = {}
     arrays = {}
     for product in ["dem", "dsm"]:
@@ -60,7 +98,7 @@ def prepare():
         links = [l for l in collection["links"] if l["rel"] == "item"]
         def item(link):
             item_url = urljoin(url, link["href"])
-            return item_url, get(item_url, product + "-" + link["href"].split("/")[-1])
+            return item_url, get(item_url, product + "-" + link["href"].split("/")[-1],link.get('file:checksum'))
         with ThreadPoolExecutor(max_workers=6) as pool:
             indexed = list(pool.map(item, links))
         intersecting = [(item_url, payload) for item_url, payload in indexed if shape(payload["geometry"]).intersects(query_box)]

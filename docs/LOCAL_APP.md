@@ -1,5 +1,17 @@
 # Auckland FlowLab local web app
 
+The current 3D review instance runs at **http://127.0.0.1:8774** in Docker container
+`floodtwin-3d-local-review`. It was created with `--env-file .env.production`, with
+`FLOODTWIN_PUBLIC_ORIGIN=http://127.0.0.1:8774` overriding the production origin.
+The port is bound to loopback. Provider values remain private; the production file
+is excluded from images and Git. `docker start floodtwin-3d-local-review` reuses this
+container configuration. Do not start the WSL launcher below to replace this review
+instance: that launcher is the separate default-port development workflow.
+
+Temporary provider failures can be resumed using **Retry blocked data** on the
+confirmed workspace. Completed artifacts are reused. Preparation progress counts
+ready steps, and 3D stays unavailable until the terrain and point cloud exist.
+
 Start from the project root in PowerShell:
 
 ```powershell

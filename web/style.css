@@ -260,7 +260,8 @@ h1 em {
 }
 .input-wrap {
   flex:1;
-  min-width:0
+    min-width:0;
+    position:relative
 }
 .input-wrap label {
   font-size:9px;
@@ -282,6 +283,9 @@ h1 em {
 .input-wrap input::placeholder {
   color:#a1ada4
 }
+.address-suggestions{position:absolute;z-index:30;top:calc(100% + 8px);left:-8px;right:-8px;background:#fff;border:1px solid #dce5da;border-radius:10px;box-shadow:0 10px 28px #173e3726;overflow:hidden}
+.address-suggestions button{display:block;width:100%;border:0;border-bottom:1px solid #edf1eb;background:#fff;color:#173e37;text-align:left;padding:10px 14px;font:inherit;font-size:12px;cursor:pointer}
+.address-suggestions button:last-child{border-bottom:0}.address-suggestions button:hover,.address-suggestions button:focus{background:#eff6e9;outline:0}
 .primary {
   display:flex;
   align-items:center;

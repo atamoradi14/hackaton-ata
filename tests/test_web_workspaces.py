@@ -173,11 +173,46 @@ def test_failed_save_releases_processing_slot(manager, monkeypatch):
 
 def test_worker_releases_processing_slot_on_failure(manager, monkeypatch):
     assert manager.slots.acquire(blocking=False)
-    def failed(identifier):
+    def failed(identifier, **kwargs):
         raise RuntimeError("Synthetic interruption")
     monkeypatch.setattr(manager, "prepare", failed)
     with pytest.raises(RuntimeError):
         manager.prepare_managed("unused")
+    assert manager.slots.acquire(blocking=False)
+    manager.slots.release()
+
+
+def test_retry_preserves_confirmed_site_and_starts_only_one_worker(manager, monkeypatch):
+    candidate=manager.search(ADDRESS)
+    job=manager.confirm(candidate['id'],ADDRESS,True,launch=False)
+    manager.jobs[job['id']]['status']='needs_inputs'
+    manager.save(manager.jobs[job['id']])
+    started=[]
+    class Worker:
+        def __init__(self, target, args, daemon):
+            self.args=args
+        def start(self):
+            started.append(self.args)
+    monkeypatch.setattr(threading,'Thread',Worker)
+    resumed=manager.retry_preparation(job['id'])
+    assert resumed['id']==job['id']
+    assert resumed['site']==job['site']
+    assert resumed['status']=='preparing'
+    manager.retry_preparation(job['id'])
+    assert started==[(job['id'],True)]
+    assert not manager.slots.acquire(blocking=False)
+    manager.slots.release()
+
+
+def test_retry_failure_releases_processing_slot(manager, monkeypatch):
+    candidate=manager.search(ADDRESS)
+    job=manager.confirm(candidate['id'],ADDRESS,True,launch=False)
+    manager.jobs[job['id']]['status']='needs_inputs'
+    def failed_save(value):
+        raise OSError('Synthetic disk failure')
+    monkeypatch.setattr(manager,'save',failed_save)
+    with pytest.raises(OSError):
+        manager.retry_preparation(job['id'])
     assert manager.slots.acquire(blocking=False)
     manager.slots.release()
 

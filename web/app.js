@@ -23,7 +23,7 @@ function icon(name) {return `<svg viewBox="0 0 24 24" fill="none" stroke="curren
 function decorate(root=document) {root.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));}
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 decorate();
-let csrf='', candidate=null, job=null, generation=0, pollTimer=null, currentProfile=null, profileDirection='east', labData=null, playTimer=null;
+let csrf='', candidate=null, job=null, generation=0, pollTimer=null, currentProfile=null, profileDirection='east';
 const map = L.map('map',{zoomControl:true,preferCanvas:true,minZoom:5,maxZoom:20}).setView([-36.83,174.75],11);
 map.createPane('parcelEvidence');map.getPane('parcelEvidence').style.zIndex=450;
 let dark=false, tiles, tileErrors=0;
@@ -53,7 +53,6 @@ async function api(path, data){
   return result;
 }
 function resetStudy(){
-  window.dispatchEvent(new Event('flowlab-reset'));
   sessionStorage.removeItem('auckland-flowlab-workspace');
   clearTimeout(pollTimer);job=null;candidate=null;currentProfile=null;terrainDisplay=null;enabledLayers.clear();availableLayers.clear();
   for(const key of Object.keys(overlays)){map.removeLayer(overlays[key]);delete overlays[key];}
@@ -61,7 +60,7 @@ function resetStudy(){
   ['confirmation-panel','job-panel','detail-card','map-legend'].forEach(id=>$(id).hidden=true);
   $('welcome-panel').hidden=false;$('map-title').textContent='Choose your study area';
   $('map-status').innerHTML='<span></span> Awaiting address';$('map-caption').innerHTML='<span class="caption-dot"></span>Auckland / Tāmaki Makaurau';
-  $('layer-count').textContent='—';$('resolution').textContent='—';$('point-count').textContent='—';$('hydraulic-state').textContent='Not run';
+  $('layer-count').textContent='—';$('resolution').textContent='—';$('point-count').textContent='—';
   $('coordinate-label').textContent='Drag to explore · Scroll to zoom';
   renderLayerMenu();
 }
@@ -77,9 +76,22 @@ function showParcel(data){
   $('map-caption').innerHTML='<span class="caption-dot"></span>Official address & parcel <span class="caption-small">LINZ / CC-BY-4.0</span>';
   $('map-title').textContent=data.site.address.split(',')[0];
 }
-$('address').addEventListener('input',()=>{generation++;resetStudy();$('search-help').classList.remove('error');$('search-help').textContent='Review and confirm this address before site-specific preparation.';});
+let suggestionTimer=null,suggestionRequest=0;
+function hideSuggestions(){$('address-suggestions').hidden=true;$('address-suggestions').replaceChildren();}
+async function loadSuggestions(){
+  const address=$('address').value.trim(),request=++suggestionRequest;
+  if(address.length<3){hideSuggestions();return;}
+  try{
+    const result=await api('/api/address-suggestions',{address});if(request!==suggestionRequest)return;
+    const choices=result.suggestions||[];if(!choices.length){hideSuggestions();return;}
+    $('address-suggestions').replaceChildren(...choices.map(choice=>{const button=document.createElement('button');button.type='button';button.role='option';button.textContent=choice.address;button.onclick=()=>{$('address').value=choice.address;hideSuggestions();$('search-form').requestSubmit();};return button;}));
+    $('address-suggestions').hidden=false;
+  }catch(error){if(request===suggestionRequest){hideSuggestions();$('search-help').textContent='Address suggestions are unavailable. Check the local provider connection or enter the full address.';}}
+}
+$('address').addEventListener('input',()=>{generation++;resetStudy();$('search-help').classList.remove('error');$('search-help').textContent='Choose an official suggestion, then review and confirm the parcel.';clearTimeout(suggestionTimer);suggestionTimer=setTimeout(loadSuggestions,250);});
+$('address').addEventListener('blur',()=>setTimeout(hideSuggestions,150));
 $('search-form').addEventListener('submit',async event=>{
-  event.preventDefault();const address=$('address').value.trim(), request=++generation;resetStudy();
+  event.preventDefault();hideSuggestions();const address=$('address').value.trim(), request=++generation;resetStudy();
   $('search-button').disabled=true;$('search-button').innerHTML='Locating…';$('search-help').classList.remove('error');
   $('search-help').textContent='Checking the official LINZ address and point-covering parcel…';
   try{
@@ -110,14 +122,13 @@ async function poll(id,request){
 }
 function renderJob(data){
   $('job-address').textContent=data.site.address;
-  const finished=data.steps.filter(s=>!['queued','running'].includes(s.status)).length;
   const ready=data.steps.filter(s=>['done','cached'].includes(s.status)).length;
-  const percent=Math.round(finished/data.steps.length*100);
+  const percent=Math.round(ready/data.steps.length*100);
   $('progress-percent').textContent=percent+'%';$('progress-fill').style.width=percent+'%';
-  $('progress-label').textContent=data.status==='preparing'?'Preparing your evidence':ready===data.steps.length?(data.hydraulic_results_available?'Data prepared · saved hydraulic results available':'Data prepared · review simulation inputs'):'Preparation needs attention';
+  $('progress-label').textContent=data.status==='preparing'?'Preparing your evidence':ready===data.steps.length?'Evidence prepared':'Preparation needs attention';
   $('steps').innerHTML=data.steps.map(s=>`<div class="step ${esc(s.status)}" title="${esc(s.detail || s.description)}"><span class="step-dot">${['done','cached'].includes(s.status)?icon('check'):s.status==='blocked'?'!':''}</span><span>${esc(s.name)}</span><span class="step-status">${({cached:'recorded',done:'ready',queued:'queued',running:'working',blocked:'blocked',partial:'partial'})[s.status]}</span></div>`).join('');
   $('map-status').innerHTML='<span></span> '+(data.status==='preparing'?'Preparing evidence':'GIS evidence');
-  $('map-caption').innerHTML='<span class="caption-dot"></span>Confirmed study area <span class="caption-small">GIS evidence only · hydraulics not run</span>';
+  $('map-caption').innerHTML='<span class="caption-dot"></span>Confirmed study area <span class="caption-small">GIS and terrain evidence</span>';
   const layers=data.gis?.layers || {};
   $('layer-count').textContent=(Object.values(layers).reduce((n,l)=>n+(l.count||0),0)+(data.buildings?.count||0)).toLocaleString();
   if(data.terrain)$('resolution').textContent='1 m';
@@ -132,9 +143,15 @@ function renderJob(data){
     $('detail-card').hidden=false;
     if(!currentProfile)loadProfiles(data.id,generation);
   }
-  $('open-studio').href=`/scene.html?job=${data.id}`;
-  if(data.available_files.includes('terrain-3d.png'))$('terrain-image').src=`/api/jobs/${data.id}/files/terrain-3d.png`;
-  renderSources(data); window.dispatchEvent(new CustomEvent('flowlab-job',{detail:data}));
+  $('open-lidar-3d').href=`/terrain3d.html?job=${data.id}`;
+  $('open-earth-3d').href=`/hybrid.html?job=${data.id}`;
+  const sceneReady=['dem_discovery.tif','dsm_discovery.tif','pointcloud_crop.laz','buildings.gpkg'].every(file=>data.available_files.includes(file));
+  $('open-lidar-3d').textContent=sceneReady?'Open 3D workspace →':'3D awaits terrain & LiDAR';
+  if(!sceneReady)$('open-lidar-3d').removeAttribute('href');
+  let retry=$('retry-preparation');
+  if(!retry){retry=document.createElement('button');retry.id='retry-preparation';retry.className='primary';retry.textContent='Retry blocked data';$('job-panel').append(retry);retry.onclick=async()=>{if(!job)return;const id=job.id,request=generation;retry.disabled=true;try{const resumed=await api(`/api/jobs/${id}/retry-preparation`,{});if(request!==generation)return;job=resumed;renderJob(resumed);poll(id,request);}catch(error){toast(error.message);}finally{retry.disabled=false;}};}
+  retry.hidden=data.status==='preparing'||!data.steps.some(step=>['blocked','partial'].includes(step.status));
+  renderSources(data);
 }
 function renderLayerMenu(){
   $('map-legend').hidden=!job;
@@ -180,9 +197,9 @@ $('basemap').onclick=()=>{dark=!dark;setBasemap();};
 $('recenter').onclick=()=>{if(parcelLayer)map.fitBounds(parcelLayer.getBounds(),{padding:[65,65],maxZoom:18});else map.setView([-36.83,174.75],11);};
 map.on('moveend',()=>{if(!candidate&&!job){const center=map.getCenter();$('coordinate-label').textContent=`${Math.abs(center.lat).toFixed(4)}° S · ${center.lng.toFixed(4)}° E · zoom ${map.getZoom()}`;}});
 function selectTab(name){
-  for(const tab of ['profile','preview','sources']){$(tab+'-content').hidden=tab!==name;$(tab+'-tab').classList.toggle('active',tab===name);$(tab+'-tab').setAttribute('aria-selected',String(tab===name));}
+  for(const tab of ['profile','sources']){$(tab+'-content').hidden=tab!==name;$(tab+'-tab').classList.toggle('active',tab===name);$(tab+'-tab').setAttribute('aria-selected',String(tab===name));}
 }
-for(const name of ['profile','preview','sources'])$(name+'-tab').onclick=()=>selectTab(name);
+for(const name of ['profile','sources'])$(name+'-tab').onclick=()=>selectTab(name);
 function renderSources(data){
   const sources=[['Recorded aerial crop','Survey dates, original imagery resolution, display resampling and clipped coverage','scene-aerial.json'],
     ['Official site match','LINZ address '+data.site.address_id+' · parcel '+data.site.parcel_id,'site_manifest.json'],
@@ -217,38 +234,10 @@ function drawProfile(index){if(!currentProfile)return;const values=currentProfil
 }
 for(const direction of ['east','north'])$(direction+'-profile').onclick=()=>{profileDirection=direction;for(const d of ['east','north'])$(d+'-profile').classList.toggle('active',d===direction);drawProfile();};
 $('profile-chart').addEventListener('pointermove',event=>{if(!currentProfile)return;const width=innerWidth<820?450:900,x0=width===450?35:45,rect=$('profile-chart').getBoundingClientRect(),local=(event.clientX-rect.left)/rect.width*width;const index=Math.max(0,Math.min(currentProfile.offset_m.length-1,Math.round((local-x0)/(width-25-x0)*(currentProfile.offset_m.length-1))));drawProfile(index);});
-const defaultBlockers=[{title:'Site-specific rainfall',detail:'Import a real HIRDS export, then review storm duration and temporal pattern.'},{title:'Connected domain & outlets',detail:'Review upstream coverage, downstream outlets and boundary water levels.'},{title:'Surface & structure assumptions',detail:'Review roughness, losses, buildings, finite barrier crests and drainage scenarios.'}];
-$('inputs-button').onclick=()=>{const blockers=job?.blockers?.length?job.blockers:defaultBlockers;$('blockers').innerHTML=blockers.map((b,i)=>`<div class="blocker"><span>${i+1}</span><div><h3>${esc(b.title)}</h3><p>${esc(b.detail)}</p></div></div>`).join('');$('inputs-dialog').showModal();};
 document.querySelectorAll('.close-dialog').forEach(button=>button.onclick=()=>button.closest('dialog').close());
 $('evidence-nav').onclick=()=>{if(!job||!currentProfile){toast('Confirm a property and prepare its data to explore site evidence.');return;}selectTab('sources');$('evidence-dialog').showModal();};
 $('workspace-nav').onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});};
-async function openLab(){
-  $('lab-dialog').showModal();$('lab-error').hidden=true;
-  try{if(!labData)labData=await api('/api/lab');$('lab-time').max=labData.seconds.length-1;renderLab();}
-  catch(error){$('lab-error').textContent=error.message;$('lab-error').hidden=false;}
-}
-$('lab-nav').onclick=openLab;$('engine-info').onclick=openLab;
-function renderLab(){
-  if(!labData)return;const name=$('lab-case').value,data=labData.cases[name],i=Math.min(Number($('lab-time').value),labData.seconds.length-1),left=data.upstream_m[i],right=data.downstream_m[i];
-  $('water-left').style.height=Math.max(0,left/.8*100)+'%';$('water-right').style.height=Math.max(0,right/.8*100)+'%';
-  $('lab-upstream').textContent=left.toFixed(3)+' m';$('lab-downstream').textContent=right.toFixed(3)+' m';
-  $('tank-wall').style.height=name==='weir'?'50%':name==='infinite_barrier'?'100%':'0';
-  $('tank-wall').style.width=name==='open'?'0':'9px';
-  const second=labData.seconds[i];$('lab-time-label').textContent=String(Math.floor(second/60)).padStart(2,'0')+':'+String(second%60).padStart(2,'0');
-  $('lab-chart').setAttribute('viewBox',`0 0 ${innerWidth<820?450:900} 220`);
-  $('lab-chart').innerHTML=chart(labData.seconds,[{values:data.upstream_m,color:'#548265'},{values:data.downstream_m,color:'#639eab'}],[0,.8],i);
-  const error=labData.validation.cases[name].max_relative_volume_error;$('lab-balance').textContent='Max volume error: '+(error*100).toExponential(2)+'%';
-}
-$('lab-case').onchange=renderLab;$('lab-time').oninput=renderLab;
-function pauseLab(){clearInterval(playTimer);playTimer=null;$('lab-play').innerHTML=icon('play');$('lab-play').setAttribute('aria-label','Play simulated time');}
-$('lab-play').onclick=()=>{
-  if(playTimer){pauseLab();return;}if(!labData)return;
-  if(Number($('lab-time').value)>=labData.seconds.length-1)$('lab-time').value=0;
-  $('lab-play').innerHTML=icon('pause');$('lab-play').setAttribute('aria-label','Pause simulated time');
-  playTimer=setInterval(()=>{const next=Number($('lab-time').value)+1;$('lab-time').value=next;renderLab();if(next>=labData.seconds.length-1)pauseLab();},100);
-};
-$('lab-dialog').addEventListener('close',pauseLab);
-window.addEventListener('resize',()=>{drawProfile();if($('lab-dialog').open)renderLab();});
+window.addEventListener('resize',drawProfile);
 api('/api/bootstrap').then(async data=>{
   csrf=data.csrf;if(generation!==0)return;
   const restoreGeneration=generation;$('address').value=data.default_address;

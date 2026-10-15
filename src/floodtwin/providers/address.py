@@ -9,6 +9,64 @@ import geopandas as gpd
 import requests
 
 
+def address_fields(address):
+    """Parse a user-entered NZ street address without making it an official match."""
+    if not isinstance(address, str):
+        raise ValueError("Provide a street number and street name")
+    parts = [" ".join(s.split()) for s in address.split(",") if s.strip()]
+    match = re.fullmatch(r"(\d+[A-Za-z]?)\s+(.+)", parts[0] if parts else "")
+    if not match:
+        raise ValueError("Provide a street number and street name")
+    number, road = match.groups()
+    # LINZ keeps town/city separate from the optional NZ postcode in full_address.
+    town = re.sub(r"\s+\d{4}$", "", parts[2]).strip() if len(parts) >= 3 else ""
+    return dict(full_address_number=number, full_road_name=road,
+                suburb_locality=parts[1] if len(parts) >= 2 else "", town_city=town)
+
+
+def like_literal(value):
+    """Escape user text for a FES PropertyIsLike pattern (wildcards are ours only)."""
+    return value.replace("\\", "\\\\").replace("*", "\\*").replace("?", "\\?")
+
+
+def suggest(address, limit=8):
+    """Return bounded official address labels for type-ahead; never assigns coordinates."""
+    if not isinstance(address, str) or not 3 <= len(address.strip()) <= 160:
+        return []
+    terms = [like_literal(term) for term in re.findall(r"[\w'-]+", address, flags=re.UNICODE)]
+    if not terms:
+        return []
+    pattern = "*" + "*".join(terms) + "*"
+    query_filter = ("<fes:Filter xmlns:fes=\"http://www.opengis.net/fes/2.0\">"
+                    "<fes:PropertyIsLike wildCard=\"*\" singleChar=\"?\" escapeChar=\"&#92;\" matchCase=\"false\">"
+                    "<fes:ValueReference>full_address</fes:ValueReference>"
+                    f"<fes:Literal>{escape(pattern)}</fes:Literal>"
+                    "</fes:PropertyIsLike></fes:Filter>")
+    # LINZ does not guarantee relevance order. Fetch a bounded candidate window,
+    # rank locally, then expose only the small type-ahead list.
+    response, _ = wfs(dict(request="GetFeature", typeNames="layer-123113", count=max(80, limit * 12),
+                           outputFormat="application/json", propertyName="address_id,full_address",
+                           filter=query_filter), "address_suggestions.json")
+    features = response.json().get("features", [])
+    seen = set()
+    results = []
+    for feature in features:
+        properties = feature.get("properties") or {}
+        label = str(properties.get("full_address") or "").strip()
+        address_id = properties.get("address_id")
+        if label and address_id is not None and label.casefold() not in seen:
+            seen.add(label.casefold())
+            results.append(dict(address=label, address_id=int(address_id)))
+    wanted = " ".join(terms).casefold()
+    def relevance(item):
+        value = item["address"].casefold()
+        number = terms[0].casefold()
+        return (0 if value.startswith(wanted) else 1,
+                0 if value.startswith(number + " ") else 1,
+                len(value), value)
+    return sorted(results, key=relevance)[:limit]
+
+
 def wfs(parameters, filename):
     key = os.environ.get("LINZ_API_KEY")
     if not key:
@@ -32,12 +90,9 @@ def wfs(parameters, filename):
 
 
 def resolve(address):
-    parts = [s.strip() for s in address.split(",")]
-    match = re.fullmatch(r"(\d+)\s+(.+)", parts[0])
-    if not match or len(parts) < 3:
+    fields = address_fields(address)
+    if not all(fields.values()):
         raise ValueError("Provide number and full street, suburb, city")
-    number, road = match.groups()
-    fields = dict(full_address_number=number, full_road_name=road, suburb_locality=parts[1], town_city=parts[2])
     response, schema = wfs(dict(request="DescribeFeatureType", typeNames="layer-123113"), "addresses_schema.xml")
     if any(f'name="{field}"' not in response.text for field in fields):
         raise RuntimeError("Official address schema changed")

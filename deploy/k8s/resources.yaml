@@ -52,7 +52,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       initContainers:
         - name: prepare-volume
-          image: docker.io/library/auckland-flowlab-app:earth-20261015-r1
+          image: docker.io/library/auckland-flowlab-app:terrain-3d-20261015-r2
           imagePullPolicy: Never
           command: [/bin/sh, -c, 'mkdir -p /state/data /state/runs /state/configs /state/reports']
           volumeMounts:
@@ -66,7 +66,7 @@ spec:
             capabilities: {drop: [ALL]}
       containers:
         - name: app
-          image: docker.io/library/auckland-flowlab-app:earth-20261015-r1
+          image: docker.io/library/auckland-flowlab-app:terrain-3d-20261015-r2
           imagePullPolicy: Never
           args: [serve, --port, '8765']
           envFrom:
