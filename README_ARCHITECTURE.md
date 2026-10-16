@@ -1,10 +1,15 @@
 # Auckland FlowLab: software, infrastructure and operations architecture
 
+> Historical operations snapshot: several sections describe the former hydraulic
+> UI, not the current product. Start with [README](README.md) and
+> [METHODOLOGY](METHODOLOGY.md) for the active boundary-review workflow. Keep this
+> reference for restore/deployment history; verify operational state before use.
+
 Implementation snapshot: **15 October 2026**. Numerical validation figures
 retain their original 14 October evidence date. This document covers the actual
 Windows/WSL development stack, browser/API/worker design, Docker packaging and
 Helsinki Kubernetes deployment. For physical assumptions, source accuracy,
-equations and simulation evidence, read [README_METHODOLOGY.md](README_METHODOLOGY.md).
+equations and simulation evidence, read the [archived hydraulic methodology](docs/archive/HYDRAULIC_METHODOLOGY_2026-10-15.md).
 
 ## Contents
 

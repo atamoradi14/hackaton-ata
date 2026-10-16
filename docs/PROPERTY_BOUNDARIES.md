@@ -1,5 +1,10 @@
 # Property boundary evidence registry
 
+> Current overview and end-to-end instructions are consolidated in
+> [README](../README.md) and [METHODOLOGY](../METHODOLOGY.md). This engineering
+> log retains earlier snapshots and API details; later dated sections supersede
+> earlier claims about acquired imagery and detector coverage.
+
 Open `http://127.0.0.1:8774/properties.html`. The Explore and 3D workspaces also
 link to this view for their confirmed property. JSON storage requires no new
 database or Postgres credentials. This feature does not run hydraulics.

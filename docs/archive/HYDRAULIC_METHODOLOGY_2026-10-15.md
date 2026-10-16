@@ -1,8 +1,12 @@
+> Historical snapshot (14–15 October 2026), retained for reproducibility only.
+> Current product documentation: [README](../../README.md) and [METHODOLOGY](../../METHODOLOGY.md).
+> Hydraulic scenarios and their old UI descriptions below are not the current boundary-review workflow.
+
 # Auckland FlowLab: data, accuracy and hydraulic methodology
 
 Technical reference for the Auckland property flood research prototype. Implementation
 and recorded validation snapshot: **14 October 2026**. Read alongside
-[README_ARCHITECTURE.md](README_ARCHITECTURE.md) and [PROGRESS.md](PROGRESS.md).
+[README_ARCHITECTURE.md](../../README_ARCHITECTURE.md) and [PROGRESS.md](../../PROGRESS.md).
 The master plan is a specification; this document describes the implemented state.
 
 ## Contents
@@ -91,7 +95,7 @@ Source references:
 - [OpenTopography dataset](https://portal.opentopography.org/lidarDataset?opentopoID=OTLAS.042025.2193.1),
   [dataset DOI](https://doi.org/10.5069/G9HH6H8T).
 - [LINZ imagery collection](https://nz-imagery.s3-ap-southeast-2.amazonaws.com/auckland/auckland_2024_0.075m/rgb/2193/collection.json).
-- [SOURCES.md](SOURCES.md) lists exact Council endpoints and provider starting points.
+- [SOURCES.md](../../SOURCES.md) lists exact Council endpoints and provider starting points.
 
 DEM/DSM, selected point cloud and imagery manifests record CC-BY-4.0. Preserve
 Woolpert, Regional Software Holdings Limited, LINZ and OpenTopography attribution
@@ -271,7 +275,7 @@ never substituted for SFINCS water depth/velocity.
 
 ## Implemented simulation configuration
 
-Source of truth: [site.py](src/floodtwin/hydraulics/site.py).
+Source of truth: [site.py](../../src/floodtwin/hydraulics/site.py).
 
 | Setting | Implemented value/meaning |
 |---|---|
@@ -327,7 +331,7 @@ After obtaining depths, derive a justified time-varying hyetograph, review units
 duration, temporal pattern, climate uplift and any areal adjustment. A DDF/IDF
 table is not itself a rainfall time series. The current uniform UI storm is an
 explicit assumption and cannot be labelled a 1% AEP or other HIRDS event.
-Details: [docs/HIRDS_API.md](docs/HIRDS_API.md).
+Details: [docs/HIRDS_API.md](../../docs/HIRDS_API.md).
 
 ## Validation and recorded results
 
@@ -346,7 +350,7 @@ redistribution, finite overtopping, below-crest blocking, an infinite barrier,
 all-cell storage drift must be ≤0.5%; still-water level/speed changes ≤0.00001 in
 their respective units; open/slope equilibrium error ≤0.005 m; sensitivity in
 compartment-mean levels ≤0.02 m. Full acceptance details are in
-[docs/HYDRAULIC_VALIDATION.md](docs/HYDRAULIC_VALIDATION.md).
+[docs/HYDRAULIC_VALIDATION.md](../../docs/HYDRAULIC_VALIDATION.md).
 
 Recorded node suite: eight cases passed; maximum relative volume error
 `5.960464477539063e-08`; finite-weir net transfer about 39.977552 m³. This establishes
@@ -447,7 +451,7 @@ itself improve hydraulic boundary conditions, wall crests or rainfall evidence.
   impacts with quantified uncertainty. These master-plan capabilities are future work.
 
 For installation, APIs, persistence, deployment and operations, continue with
-[README_ARCHITECTURE.md](README_ARCHITECTURE.md).
+[README_ARCHITECTURE.md](../../README_ARCHITECTURE.md).
 
 
 ## Interactive revision evidence — 15 October 2026

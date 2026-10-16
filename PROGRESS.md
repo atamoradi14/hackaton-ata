@@ -1501,3 +1501,42 @@ with explicit standard WGS84-to-NZTM transform for sibling GeoJSON. No raw sourc
 prediction, review or geometry relabelling, app edit, restart, deployment or full
 test suite. Next useful validation is matched oblique/street/field evidence of
 the concealed physical barriers, rather than treating these visual labels as GT.
+
+## 2026-10-16 - Consolidated README and boundary prediction methodology
+
+Created canonical README.md and METHODOLOGY.md for the current non-hydraulic
+property/3D/boundary product. Documented current local setup with private production
+env use, JSON persistence (not claimed PostgreSQL ingestion), original edge IDs,
+proper crossings, object-level export filtering, source/datum checks, exact batch
+detector rules, hash-bound publication, field/height classes and review precedence.
+Used the property-boundary-review skill to document the full higher-evidence
+Earth top/four close oblique/Street View/native LiDAR process. Explicitly separated
+subjective confidence from independently established accuracy and recorded failed
+Street View versus successful supplied-image evidence.
+
+Cleanup: relocated the old root README and README_METHODOLOGY to docs/archive/
+with historical banners and adjusted links. Added pointers/banners in architecture
+and boundary engineering notes instead of deleting scientific history or source
+data. No runtime, datasets, predictions, manual reviews or secrets edited.
+
+Added two source-controlled accessible conceptual SVG diagrams. Reused inspected
+actual local Google top/oblique, LiDAR boundary editor, regional atlas and exact
+object-875 aerial/profile evidence as illustrated examples, linked to ignored
+output/ files. These real private screenshots were not copied into public docs
+assets or represented as new browser captures. Documented their clean-clone and
+redistribution limitations.
+
+Verification: current container/health and actual regional-export summary read;
+CLI help checked; source implementation and recorded sample confidence values
+cross-checked; 75 local file/image links resolved, six documents' code fences
+balanced, two SVG XML/accessibility checks passed and the documented JSON excerpt
+parsed. git diff --check passed. The SVGs are concept diagrams, not measured data.
+No full test suite, solver, frontend rebuild, server restart or deployment.
+
+Found a packaging caveat while documenting setup: Dockerfile's explicit frontend
+COPY list omits newer boundary-editor/geometry transitive imports used by the
+terrain-workspace entry. Documented this rather than claiming a fresh image build
+works; the local quick-start reuses the verified existing image with source/web
+bind mounts. Next optional engineering work: repair/test that clean-image packaging
+separately; independent physical-reference validation is still required for any
+claim of very accurate fence/wall or dimensional prediction.

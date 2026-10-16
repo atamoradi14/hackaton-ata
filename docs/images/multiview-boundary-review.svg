@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="690" viewBox="0 0 1120 690" role="img" aria-labelledby="title desc">
+  <title id="title">Multi-view capture plan and boundary component records</title>
+  <desc id="desc">A conceptual four-edge property is viewed from four oblique directions, a top view and street frontage. A boundary line can have separate hedge, hidden possible fence, and gate components with differing certainty. Not a real property or surveyed geometry.</desc>
+  <defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#49756d" stroke-width="1.4"/></marker></defs>
+  <rect width="1120" height="690" rx="20" fill="#f4f7f1"/>
+  <g font-family="Arial, sans-serif" fill="#173f3b">
+    <text x="32" y="42" font-size="24" font-weight="700">One property, multiple views, separate physical components</text>
+    <text x="32" y="70" font-size="14" fill="#526c65">ILLUSTRATIVE ONLY · no real coordinates, measurements or imagery · camera angles do not define cadastral edges</text>
+    <rect x="164" y="185" width="306" height="252" fill="#e0ebcd" stroke="#b79a34" stroke-width="2"/>
+    <rect x="250" y="267" width="134" height="95" fill="#a0b5ad" stroke="#567b70"/>
+    <text x="280" y="318" font-size="18">House</text>
+    <text x="295" y="172" font-size="16" font-weight="700">Edge 3</text>
+    <text x="477" y="312" font-size="16" font-weight="700">E2</text>
+    <text x="295" y="458" font-size="16" font-weight="700">Edge 1</text>
+    <text x="129" y="312" font-size="16" font-weight="700">E4</text>
+    <text x="241" y="219" font-size="14">Original GIS polygon</text>
+    <g fill="#173f3b"><circle cx="164" cy="185" r="4"/><circle cx="470" cy="185" r="4"/><circle cx="470" cy="437" r="4"/><circle cx="164" cy="437" r="4"/></g>
+    <path d="M184 420H354 M404 420H450" stroke="#3f824b" stroke-width="12" fill="none"/>
+    <path d="M184 429H354" stroke="#8e7857" stroke-width="2" stroke-dasharray="5 5"/>
+    <path d="M355 420H403" stroke="#4b7992" stroke-width="4"/>
+    <rect x="102" y="493" width="435" height="43" rx="6" fill="#cdd9d7"/>
+    <text x="209" y="521" font-size="17">Street frontage</text>
+    <g stroke="#49756d" stroke-width="1.8" fill="none" marker-end="url(#arrow)">
+      <path d="M100 147L159 195"/><path d="M533 147L475 195"/>
+      <path d="M100 475L156 429"/><path d="M533 475L478 429"/>
+      <path d="M319 130V179"/><path d="M320 576V539"/>
+    </g>
+    <text x="32" y="124" font-size="15">Rear-left 3D</text>
+    <text x="459" y="124" font-size="15">Rear-right 3D</text>
+    <text x="32" y="483" font-size="15">Front-left</text>
+    <text x="495" y="483" font-size="15">Front-right</text>
+    <text x="255" y="116" font-size="15">Top / aerial</text>
+    <text x="188" y="602" font-size="16">Street View + both corners</text>
+    <rect x="605" y="122" width="480" height="462" rx="14" fill="white" stroke="#9ebdb0"/>
+    <text x="629" y="158" font-size="20" font-weight="700">Edge 1: retain two original GIS endpoints</text>
+    <text x="629" y="190" font-size="16">Component A · visible hedge</text>
+    <text x="629" y="214" font-size="14" fill="#526c65">Type supported; height needs local-ground evidence.</text>
+    <text x="629" y="253" font-size="16">Component B · possible concealed fence</text>
+    <text x="629" y="277" font-size="14" fill="#526c65">Hypothesis only; material/height/extent unresolved.</text>
+    <text x="629" y="316" font-size="16">Component C · visible gate / opening</text>
+    <text x="629" y="340" font-size="14" fill="#526c65">Record fabric and extent only where actually exposed.</text>
+    <path d="M629 367H1060" stroke="#ccd9d0"/>
+    <text x="629" y="397" font-size="17" font-weight="700">Native LiDAR cross-check</text>
+    <text x="629" y="425" font-size="15">Inspect classes, ground, tops and crop limits.</text>
+    <text x="629" y="451" font-size="15">Canopy p95 is not the hidden fence crest.</text>
+    <text x="629" y="492" font-size="17" font-weight="700">Per edge × per view</text>
+    <text x="629" y="519" font-size="15">Visible base / top / ends? Occluded? Different date?</text>
+    <text x="629" y="546" font-size="15">Image-only object: no invented GIS geometry.</text>
+    <text x="32" y="649" font-size="15" fill="#526c65">Four viewpoints are a coverage target, not proof of full visibility. Save evidence, unknowns and separate field confidence.</text>
+    <text x="32" y="675" font-size="15" fill="#526c65">A screenshot, LiDAR class and manually reviewed label remain distinct from independently surveyed ground truth.</text>
+  </g>
+</svg>
