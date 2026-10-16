@@ -39,7 +39,31 @@ def main():
     web.add_argument("--port", type=int, default=8765)
     address = commands.add_parser("resolve-address")
     address.add_argument("--address", required=True)
+    civic=commands.add_parser('import-civic-pilot',help='Record bounded Mt Albert property/edge evidence from the supplied catalogue')
+    civic.add_argument('--catalogue',required=True)
+    civic.add_argument('--without-lidar',action='store_true')
+    record=commands.add_parser('record-properties',help='Refresh boundary records for prepared, confirmed local workspaces')
+    record.add_argument('--workspace')
+    record.add_argument('--enrich',action='store_true',help='Fetch bounded catalogue vector sources for this confirmed property')
+    record.add_argument('--force',action='store_true',help='Rebuild evidence while retaining separately saved reviews')
     args = parser.parse_args()
+    if args.command=='import-civic-pilot':
+        from .providers.civic import import_pilot
+        report=import_pilot(Path.cwd(),Path(args.catalogue),not args.without_lidar)
+        print(json.dumps({k:v for k,v in report.items() if k!='sources'},indent=2)); return
+    if args.command=='record-properties':
+        from .properties import record_workspace,read
+        records=[]
+        for folder in (Path.cwd()/'data/web-sites').glob('*/data/processed/site'):
+            if args.workspace and folder.parents[2].name!=args.workspace: continue
+            site=read(folder/'site_manifest.json',{})
+            if site.get('user_visual_confirmation'):
+                if args.enrich:
+                    from .providers.civic import enrich_workspace
+                    enrich_workspace(Path.cwd(),folder)
+                result=record_workspace(Path.cwd(),folder,site,folder.parents[2].name,force=args.force)
+                records.append(dict(id=result['id'],segments=len(result['boundary_segments'])))
+        print(json.dumps(records,indent=2)); return
     if args.command in {"hirds-files", "hirds-download", "hirds-inspect"}:
         from .providers.datahub import api, download, inspect_catalog
         try:

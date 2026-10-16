@@ -1,0 +1,4 @@
+interface:
+  display_name: "Property Boundary Review"
+  short_description: "Review boundary objects across 3D, street and LiDAR views"
+  default_prompt: "Use $property-boundary-review to inspect each selected property from four distinct Earth 3D angles plus Street View, aerial and LiDAR, save evidence-backed per-boundary attributes, prefill the local 3D editor and verify it visually."

@@ -17,6 +17,7 @@ EXPORTS = {"overview.html", "terrain-3d.png", "terrain-preview.png", "ground-dem
            "ground-dem-qc.json", "buildings-manifest.json", "site_manifest.json", "parcel.geojson",
            "domain-screening.json", "gis-discovery.png", "map-terrain.png", "address.geojson"}
 EXPORTS.update({"scene-aerial.jpg", "scene-aerial.json", 'map-aerial.png','map-aerial.json'})
+EXPORTS.update({name+'.gpkg' for name in ['overland_flow','flood_plains','flood_prone','pipes','catchpits','manholes','connections','buildings']})
 
 
 def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origin=None):
@@ -24,6 +25,8 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
     manager = workspaces or Workspaces(root)
     token = secrets.token_urlsafe(32)
     asset_cache = {}
+    from ..properties import Registry, record_workspace
+    registry = Registry(root)
     allowed_hosts = {f"localhost:{port}", f"127.0.0.1:{port}"}
     allowed_origins = {f"http://{host}" for host in allowed_hosts}
     if public_origin:
@@ -83,6 +86,10 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                 elif self.path == "/api/confirm":
                     job = manager.confirm(data.get("id"), data.get("address", ""), data.get("confirmed"))
                     self.json(manager.public(job), 202)
+                elif self.path.startswith('/api/properties/') and self.path.endswith('/review'):
+                    parts=self.path.split('/')
+                    if len(parts)!=7 or parts[4] not in {'segments','objects'}: raise ValueError('Invalid entity review route')
+                    self.json(registry.review(parts[3],parts[5],data,kind='segment' if parts[4]=='segments' else 'object'))
                 elif self.path.startswith('/api/jobs/') and self.path.endswith('/retry-preparation'):
                     identifier=self.path.split('/')[3]
                     self.json(manager.retry_preparation(identifier),202)
@@ -163,6 +170,40 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     self.send(json.dumps(dict(google=dict(enabled=bool(key), browser_key=key or None),
                         cesium_version='1.146.0', google_capture_date=None)).encode(), 'application/json')
                     return
+                if path == '/api/properties':
+                    self.json(registry.collection()); return
+                if path == '/api/properties/export':
+                    self.json(registry.export()); return
+                if path.startswith('/api/property-assets/'):
+                    name=path.split('/')[-1]
+                    if name not in {'pointcloud.laz','dem.tif','dsm.tif','aerial.tif','scene-aerial.jpg','map-aerial.png','map-aerial.json'}:
+                        raise ValueError('Native asset not available')
+                    target=registry.folder/'raw/native'/name
+                    self.send(target.read_bytes(),mimetypes.guess_type(name)[0] or 'application/octet-stream'); return
+                if path.startswith('/api/properties/'):
+                    parts=path.split('/'); pid=parts[3]
+                    if len(parts)==4: self.json(registry.get(pid))
+                    elif len(parts)==5 and parts[4]=='export': self.json(registry.export(pid))
+                    elif len(parts)==5 and parts[4]=='boundaries': self.json(registry.geojson(pid))
+                    elif len(parts)==5 and parts[4]=='points': self.json(registry.point_export(pid))
+                    elif len(parts)==5 and parts[4]=='prediction-evidence':
+                        registry.get(pid)
+                        self.send((registry.folder/'sample-evidence'/pid/'top-evidence.png').read_bytes(),'image/png')
+                    else: raise ValueError('Property route not available')
+                    return
+                if path.startswith('/api/property-sources/'):
+                    import re
+                    pieces=path.split('/'); name=pieces[-1]; base=registry.folder/'raw'
+                    if len(pieces)==5:
+                        if not re.fullmatch(r'area_[0-9a-f]{24}',pieces[3]): raise ValueError('Invalid source area')
+                        base=base/'areas'/pieces[3]
+                        report=read_json(base/'manifest.json',{}).get('sources',{}).get(name,{})
+                    else: report=read_json(registry.folder/'import-manifest.json',{}).get('sources',{}).get(name,{})
+                    raw=report.get('raw_file')
+                    if not raw: raise ValueError('Source not recorded')
+                    target=(base/raw).resolve()
+                    if not target.is_relative_to((registry.folder/'raw').resolve()): raise ValueError('Invalid source path')
+                    self.send(target.read_bytes(),'application/json'); return
                 if path.startswith("/api/jobs/"):
                     parts = path.split("/")
                     identifier = parts[3]
@@ -170,6 +211,9 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     folder = manager.directory(identifier) / "data/processed/site"
                     if len(parts) == 4:
                         self.json(manager.public(job))
+                    elif len(parts)==5 and parts[4]=='property':
+                        with manager.lock:
+                            self.json(record_workspace(root,folder,job['site'],identifier))
                     elif len(parts) == 5 and parts[4] == 'georeference':
                         from ..terrain.georeference import frame
                         scene = read_json(folder/'scene.json')
@@ -224,6 +268,7 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                                '/hybrid.html':root/'web/terrain-workspace.html',
                                '/earth-context.html':root/'web/hybrid.html',
                                '/terrain-workspace.css':root/'web/terrain-workspace.css'})
+                static.update({'/'+name:root/'web'/name for name in ['properties.html','properties.js','properties.css']})
                 vendor = root / "web/node_modules/leaflet/dist"
                 if path.startswith('/vendor/cesium/'):
                     base = (root/'web/node_modules/cesium/Build/Cesium').resolve()

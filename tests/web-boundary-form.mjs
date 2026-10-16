@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {boundaryForm} from '../web/boundary-form.js';
+const prediction={status:'unreviewed_prediction',type:'hedge',height_m:1.8,material:'vegetation',continuity:'discontinuous',rationale:'Synthetic fixture'};
+const entity={structure:{type:'unknown',height_m:null},prediction};
+assert.equal(boundaryForm(entity).proposed,true);
+assert.equal(boundaryForm(entity).values.height_m,1.8);
+assert.equal(entity.structure.height_m,null);
+assert.equal(boundaryForm({...entity,review:{notes:'Existing manual decision'},structure:{type:'fence',height_m:2}}).values.height_m,2);
+assert.equal(boundaryForm({...entity,prediction:{...prediction,stale:true}}).proposed,false);
+assert.equal(boundaryForm({...entity,prediction:{...prediction,status:'not_applicable'}}).proposed,false);
+assert.equal(boundaryForm({structure:{type:'unknown'}}).proposed,false);
+assert.equal(boundaryForm(entity).notes.includes('Unverified'),true);
+console.log('PASS: fresh proposals prefill, saved reviews win, stale/context predictions do not prefill, source unchanged');

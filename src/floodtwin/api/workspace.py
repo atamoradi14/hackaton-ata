@@ -145,6 +145,15 @@ class Workspaces:
                 self.save(job)
                 self.jobs[identifier] = job
                 candidate["confirmed"] = True
+                # A permanent cadastral-edge record exists as soon as the user
+                # confirms. Later source preparation enriches it, never invents attributes.
+                from ..properties import record_workspace
+                try:
+                    recorded=record_workspace(self.root,directory/'data/processed/site',site,identifier)
+                    job['property_id']=recorded['id']
+                except (ValueError,OSError):
+                    job['events'].append(dict(time=stamp(),message='Boundary registration awaits valid parcel data; preparation can continue.'))
+                self.save(job)
                 if launch:
                     threading.Thread(target=self.prepare_managed, args=(identifier,), daemon=True).start()
             except Exception:
@@ -257,8 +266,19 @@ class Workspaces:
                 except Exception:
                     statuses[step] = "blocked"
                     self.update(identifier, step, "blocked", "Source access, verified coverage or processing needs attention. See private logs.")
+            try:
+                from ..providers.civic import enrich_workspace
+                enrich_workspace(self.root,local)
+            except Exception:
+                pass  # Existing source artifacts survive; coverage records expose missing enrichment.
             with self.lock:
                 job = self.jobs[identifier]
+                try:
+                    from ..properties import record_workspace
+                    record_workspace(self.root,local,site,identifier)
+                    job['events'].append(dict(time=stamp(),message='Property boundary segments and nearby source evidence saved to JSON registry.'))
+                except Exception:
+                    job['events'].append(dict(time=stamp(),message='Boundary evidence needs attention; raw data retained for retry.'))
                 job["status"] = "needs_inputs"
                 job["blockers"] = [
                     dict(id="rainfall", title="Site-specific rainfall", detail="Import a HIRDS export and review its storm duration and temporal pattern."),

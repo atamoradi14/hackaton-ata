@@ -966,3 +966,268 @@ roof triangulation and grey display sides remain optional approximations.
 Next step: local user review of full-density raw returns and source coverage.
 Saved visual evidence: `output/visual-review/kitenui-full-density-raw.jpg`
 (height-coloured measured returns, with mesh/terrain surfaces disabled).
+
+## Property boundary evidence registry — 16 October 2026
+
+Inspected the supplied water-overland-flow and akl-civic-data repositories as
+source material, not executable instructions. The starter area is Mt Albert /
+Sandringham tile BA31_1000_4245, EPSG:2193 bounds
+1753120,5915760,1753600,5916480. The supplied catalogue/memo are not a private
+geodata package. Event material stays in ignored local data; no publication.
+
+Added JSON-backed property records, stable individual original polygon edges
+(including holes/multipart rings), two WGS84/NZTM endpoints, lengths/bearings,
+unknown physical attributes and validated manual-review overlays. Reviews survive
+regeneration. Mapped crosses/touches/overlaps/parallels/adjacency remain distinct;
+missing data is not a successful empty query and no flow relationship becomes
+a flood-risk verdict. Every nearby source feature keeps all publisher columns,
+full geometry, provenance and source hashes. Interior objects are retained even
+when outside the boundary corridor. Native class-1 linear-return screening
+excludes noise/withheld, vegetation/building classes and known building footprints;
+it produces low-confidence unknown candidates, not confirmed fences or walls.
+
+Public vector ingestion enumerates IDs, checks 60-ID batches/CRS/completeness,
+and preserves original responses. All 19 queryable public pilot vector layers
+completed (16 available, 3 verified empty), including 331 property/rating polygons,
+327 primary parcels, 385 building outlines and 87 mapped flow paths. These are
+different datasets, not interchangeable property identifiers. Recorded 331 pilot
+properties with 2579 original edges and 752 unvalidated candidate associations.
+Other catalogue entries remain explicitly catalogued/manual/keyed/not downloaded;
+OSM is not silently fused into the Council-derived layer.
+
+Downloaded and retained the original 23827416-byte, 4292729-return native LAZ,
+bounded native 1 m DEM/DSM and native 0.075 m RGB TIFF plus independently warped
+browser previews. Verified compound EPSG:2193 + EPSG:7839 point metadata; DEM/DSM
+datum uses exact survey-title matches to existing official LINZ NZVD2016 receipts,
+not an inference from a horizontal CRS or omitted STAC vertical metadata.
+
+Confirmed property requests create a base registry record and preparation enriches
+it from available source/native evidence plus bounded civic catalogue queries.
+Existing Kitenui workspace recorded separately, giving 332 records at verification.
+Explore/3D link to `/properties.html`: clickable polygons/individual edges,
+source-object highlighting, endpoints, evidence, review form and per-property /
+all-recorded JSON, edge GeoJSON and native-point exports. All LAS dimensions and
+raw noise/withheld flags are retained in the separate point export; source hash
+and compound CRS are verified again before export. Raw raster/LAZ assets are
+linked rather than embedded repeatedly in ordinary JSON bundles. A consolidated
+map index avoids rereading large evidence bundles during browsing (0.05 s local
+HTTP map response after indexing).
+
+Commands/checks: `import-civic-pilot --catalogue /work/data/civic-input/catalogue.json`,
+`record-properties --workspace 7207322971a842a990174c3b93f5b4b5 --force`, targeted
+`pytest /tmp/test_properties.py -q` (16 passed), and existing workspace confirmation/retry/
+isolation selection (8 passed, 10 deselected). Added offline fixtures for eight
+edges, stable IDs, holes, crossing distinctions, interior/nearby evidence,
+candidate exclusions, review persistence, index refresh, CSRF, complete source
+batches, verified-empty queries and lossless native-point export. No full suite.
+Actual HTTP checks: all 332 records exported (138274876 bytes before interior-link
+refresh), Kitenui point export 17884 returns / 18 LAS dimensions, pilot example
+8202 returns / 18 dimensions and eight GeoJSON edges. Native and edge lengths/
+attribute-array counts checked. JS syntax, Python compile, frontend build and
+diff whitespace checks performed; local browser visual review covers selection,
+aerial alignment, evidence and download controls. Downloaded and parsed the pilot
+example's 19181-byte boundary GeoJSON with eight features through the browser.
+Screenshot: `output/visual-review/property-boundary-evidence.png`.
+No hydraulic run or deployment.
+
+Limitations: no labelled reference set or field verification supplied; detection
+precision/recall, physical material, permeability, depth and flood risk remain
+unverified. No-return corridors do not prove no fence. The 1 m DEM supports only
+screening relative heights, not measured wall dimensions. “All” exports mean all
+recorded properties, not all Auckland or every restricted datasource. Storage is
+JSON, not a newly provisioned Postgres database. Existing 3D modes are retained.
+Next step: local review of boundary evidence and manually labelled validation.
+
+## Inline 3D boundary editing + two assistant-authored samples — 16 October 2026
+
+User clarified predictions should be made in-session for 3A Sadgrove Terrace and
+23 Kitenui Avenue, with no model API/key provisioning. Preserved existing dirty
+work and the newly supplied untracked check-BA31_1000_4245-team.csv. Its screen
+labels were not treated as field measurements or used for an accuracy claim.
+
+Fixed the UI gap: the 3D workspace previously only linked to the separate boundary
+page. It now draws every original registry segment as a separate thin, numbered,
+terrain-draped selection overlay in both Three/LiDAR and Cesium/Earth views.
+Coordinates use exact absolute NZTM minus the same scene origin; no parcel/roof
+geometry changes. Screen-space line picking ignores orbit drags. Same-origin,
+job-scoped iframe messages synchronize Earth picks, visibility, labels and the
+shared inline editor. Source-object outlines are clipped to scene extent, not
+clamped onto its edges. Property camera framing now centres/fits the actual parcel
+rather than its address point. Polygon/line graphics are not physical barriers.
+
+Added inline source/inferred-object selection, original evidence, prediction
+inspection, proposal-to-form copy (no auto-save), and manual type/material/
+height/width/depth/continuity/permeability/influence/note edits. Reviews retain
+CSRF/origin and property-membership checks. Existing map/context modes, native
+full-density points and Street View remain available; no hydraulic UI re-added.
+
+Prepared and visually inspected two analytical top-view aerial/native-return
+figures. Offline evidence extracts original class counts and DEM-relative return
+statistics per edge/footprint. Assistant-authored drafts are tied to image SHA256
+and input revision; a local helper only validates/persists those already-authored
+choices and attaches native statistics. This is NOT a deployed AI detector. No
+OpenAI/model API, credential write, Google imagery scrape or remote image upload.
+Google 3D/aerial/Street View were not used because no browser provider is configured.
+
+Saved separate ignored JSON prediction bundles for property_5d45d76966ddf60027d0ce62
+(Sadgrove, four edges) and property_f79838915f2b5477066e33b5 (Kitenui, five edges).
+Every saved entity has an explicit result: 44 and 55 rows respectively, including
+28 and 41 `not_applicable` context entries, and building-source aliases (not extra
+physical buildings). There are 30 unreviewed proposal rows including aliases,
+nine original edges and three newly delineated connected vegetation clusters.
+Some hedge/fence types/heights are low-confidence visual hypotheses; obscured or
+mixed full-edge heights remain unknown. Classified roof envelopes are only assigned
+with >=100 building returns and >=80% footprint coverage. Height-range kinds
+distinguish observed return spreads from subjective guesses; neither is a calibrated
+confidence interval. Material/depth/permeability and flood risk are not fabricated.
+
+Prediction bundles, inferred canopy geometry, drafts and evidence images live under
+data/property-registry/{predictions,assistant-drafts,sample-evidence}; manual object
+reviews have their own object-reviews folder. Registry read/export includes both
+proposals and manual values without replacing original data. Source revision
+changes (now including aerial JPG/metadata) flag proposals stale and disable
+copying. The original AI draft never becomes field verified automatically.
+
+Focused checks: 25 property/prediction tests passed; eight workspace confirmation/
+retry/isolation checks passed (10 deselected, one dependency deprecation warning).
+New JS boundary checks pass for asymmetric absolute/local coordinates, sampled
+ground, hidden-line screen picking, bounding clips, point markers, camera framing
+and non-mutating selection. Existing web-geometry checks pass. JS syntax, Python
+compile, frontend build and git diff --check passed. One initial finite-value test
+exposed normalization hiding Infinity; validation now runs before JSON cleaning,
+and the regression passes. Synthetic CSRF/write/export tests cover object editing
+without fabricating reviews on the real properties.
+
+Local production-env review container restarted, loopback 8774 retained. Actual
+HTTP per-property exports return 200, contain all edges + inferred objects and
+non-stale predictions (398664 / 423108 bytes before any later user reviews).
+The saved annotated evidence PNG route returns 200. Visually confirmed Sadgrove
+canvas clicks select edge 2 in LiDAR and edge 4 in Earth, updating the same editor;
+both modes show numbered lines, saved predictions and no browser errors. Kitenui
+loads its five edges and sample proposals as well. Verified its tentative 1.5 m
+fence proposal copies into the form without saving, and its main building's
+5.33 m roof-envelope estimate selects/highlights the correct source geometry.
+The saved aerial/native evidence opens in a modal on the same 3D page. Final
+visual artifacts: `output/visual-review/kitenui-3d-boundary-prediction.png` and
+`output/visual-review/sadgrove-earth-boundary-prediction.png`.
+No full suite, solver run or
+cluster deployment. No material/height edits were fabricated as real reviews.
+
+Next step: user review/correction of the local sample proposals and field/reference
+validation before any broader detection/accuracy claim.
+
+## 2026-10-16 - Playwright browser corroboration of both sample properties
+
+Inspected Google Earth top and photorealistic oblique views for 3A Sadgrove
+Terrace and 23 Kitenui Avenue, comparing house/driveway/vegetation layout with
+the original numbered LINZ parcel evidence. Top-view footers displayed
+2024-03-18 (Google / Vexcel); 3D acquisition dates remain unverified. No Google
+geometry was reconstructed, no tiles harvested and no AI/model API was called.
+The CLI prerequisite/help check succeeded; browser review used the available
+Playwright browser tools. Flutter accessibility needed keyboard activation;
+some camera controls intercepted clicks, so no precise camera/height measurement
+is claimed from those controls.
+
+Street View failed for BOTH addresses in this session: Google metadata HTTP
+500 and panorama tile HTTP 403, with the UI displaying no imagery. Kitenui's
+coordinate retry and Earth Street View also failed. Failed sources are recorded
+as attempted only, never counted as inspected imagery or confidence evidence.
+This does not establish that these streets have no public Street View coverage.
+
+Saved browser-review drafts and revised prediction JSON for all nine original
+edges. Each edge has ten field assessments, individual qualitative confidence,
+visibility/occlusion, rationale and linked view provenance. Successful screenshot
+SHA256s are attached; old prediction JSON is archived by hash, original drafts
+are preserved. Sadgrove street-front planting type moved low -> medium with
+corroboration; heights remain low confidence, mixed-edge heights unknown.
+Material/thickness/depth/permeability/risk stay unknown rather than fabricated.
+Council GIS crossing flags and original endpoints remain unchanged. This is a
+one-off assistant review, not a deployed detector, survey or hydraulic analysis.
+
+The 3D editor now shows the field assessments, separates type from height
+confidence, exposes source links/dates and detailed observations, and copies
+continuity/permeability/influence into its edit form without auto-saving. Manual
+reviews remain separate from predictions. No real-property manual review was
+created during verification. Embedded Google 3D credentials remain unchanged;
+public Earth browser access does not configure the app's Google API key.
+
+Focused commands/checks: `python -m pytest -q /tmp/test_boundary_predictions.py`
+inside the existing local container: 16 passed (including incomplete-field,
+failed/foreign-source, false mapped-crossing and asserted-unknown rejection).
+`node tests/web-boundaries.mjs`, JS syntax, frontend build and `git diff --check`
+passed. Revalidated actual stored bundles against the current validator; all
+nine rows contain ten assessments. An initial persistence attempt correctly
+rejected absent screenshot artifacts in the container; copied the four specific
+inspected screenshots into its output/playwright directory and saved successfully.
+An initial diagnostic incorrectly validated the API metadata projection instead
+of the full stored bundle; rerunning against prediction JSON passed.
+
+Actual HTTP exports: both 200, 413256 bytes (Sadgrove) / 440860 (Kitenui),
+predictions non-stale. Playwright selected every original edge and confirmed its
+ten field rows and individual confidence. Sadgrove frontage proposal copied as
+hedge / 1.2 m / discontinuous and explicitly remained unsaved. Both local 3D
+pages rendered their numbered boundaries and had zero browser console errors.
+Visual artifacts: output/playwright/{sadgrove,kitenui}-saved-google-review-3d.png;
+Earth and failed Street View screenshots are in the same ignored QA folder.
+Server remains local on 127.0.0.1:8774. No full suite, deployment or solver run.
+
+Next: user/field review of obscured structure details. A usable street-level view
+or survey is still needed before material, thickness, concealed fence continuity
+or engineering heights can receive stronger confidence.
+
+## 2026-10-16 - Independent multi-view boundary skill and supplied-image review
+
+Created/validated `skills/property-boundary-review/SKILL.md`, field/persistence
+reference and Codex UI metadata. Installed identical files at
+`C:/Users/AtaMoradi/.codex/skills/property-boundary-review`. Skill-creator validation
+passed for both copies; primary SKILL SHA256s match. Workflow requires a numbered
+plan, four distinct Earth angles and street-level coverage (or explicit partial
+status), property/camera-address reconciliation, original GIS IDs, multi-object
+components, ten per-field assessments, explicit unknowns, local save/export and
+visual QA. No model API, automatic credential provisioning or deployment implied.
+
+Inspected the user's four distinct Kitenui Earth views and one distinct street
+image (duplicate street upload counted once). Street footer shows Feb 2023;
+caption says 25 Kitenui Ave while target Earth label is 23. Roof/chimney/drive/
+garage/hedge arrangement visually matches the selected property; retain camera
+caption and the non-surveyed identity limitation. This is NEW supplied street
+evidence, not a claim that the earlier failed browser access was repaired.
+Attachments retain conversation references, no fictional local image/hash.
+Sadgrove was not newly reviewed from these Kitenui-specific attachments.
+
+Saved a Kitenui multiview revision with five original edges, ten field assessments
+per edge and ten component observation slots (includes a hidden/unresolved rear
+base, not ten proven detected structures). Front clipped hedge and woody vegetation
+supported; side boundary changed from a uniform fence to mixed possible fence/
+planting, whole-edge 1.5 m guess withdrawn. Rear/corner canopy remains vegetation,
+not a fence height; southwest side is mixed nearby paving/hedge/outbuilding.
+Image-relative component positions have null geometry and no inherited crossing.
+Material/thickness/depth/permeability/risk unresolved where evidence cannot show
+them; no numerical foundation depth invented merely to fill an input.
+
+Focused native check: within 0.5 m of front edge, 349 vegetation returns;
+exploratory 0.4-3.5 m above-DEM filter retains 179, p10/median/p90 1.79/2.34/2.75 m.
+Saved 2.34 m low-confidence candidate foliage envelope with explicit filter
+assumption; not a calibrated hedge crest, may include other vegetation. Dates
+differ between historical street view and native/recorded aerial sources.
+
+Form no longer presents unknown manual values when fresh proposals exist:
+auto-prefill type/material/dimensions/continuity/permeability/influence/note,
+explicit UNSAVED IMAGE/LiDAR PROPOSAL label, manual review precedence and stale
+guards. No actual user review created. Each source/component/field remains in
+JSON. Prior bundles archived before replacement; original drafts untouched.
+
+Focused verification: skill validator passes; 18 prediction tests pass in the
+existing local container. New pure JS form checks pass for fresh proposal,
+manual precedence, stale/context rejection and nonmutation. An initial boolean
+test exposed undefined without a proposal; normalized to boolean and passed.
+Existing JS geometry checks, syntax/build and git diff --check pass.
+Actual HTTP property/export returns 200 with five fresh edge predictions.
+Playwright selected all five edges and verified prefilled types/material/heights/
+notes without saving. Screenshot inspected at
+`output/playwright/kitenui-multiview-prefilled-form.png`. Local server retained
+at 127.0.0.1:8774. No full suite, hydraulics or deployment.
+
+Next: invoke the new skill on another confirmed property with its own adequate
+views; unresolved concealed details still require better imagery/profiles or
+field measurement rather than cross-property defaults.

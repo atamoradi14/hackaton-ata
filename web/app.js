@@ -145,6 +145,7 @@ function renderJob(data){
   }
   $('open-lidar-3d').href=`/terrain3d.html?job=${data.id}`;
   $('open-earth-3d').href=`/hybrid.html?job=${data.id}`;
+  let boundaries=$('boundary-records');if(!boundaries){boundaries=document.createElement('a');boundaries.id='boundary-records';boundaries.textContent='Boundary lines & nearby objects →';$('job-panel').append(boundaries);}boundaries.href=`/properties.html?job=${data.id}`;
   const sceneReady=['dem_discovery.tif','dsm_discovery.tif','pointcloud_crop.laz','buildings.gpkg'].every(file=>data.available_files.includes(file));
   $('open-lidar-3d').textContent=sceneReady?'Open 3D workspace →':'3D awaits terrain & LiDAR';
   if(!sceneReady)$('open-lidar-3d').removeAttribute('href');
