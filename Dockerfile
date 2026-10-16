@@ -2,7 +2,9 @@ FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b533
 WORKDIR /frontend
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --ignore-scripts --no-audit --no-fund
-COPY web/scene.js web/terrain3d.js web/terrain-workspace.js web/site-geometry.js web/hydraulic.js web/hybrid.js web/hybrid-model.js web/build.mjs ./
+# Include the shared boundary editor/geometry/form modules and their imports.
+# node_modules and private artifacts are excluded by .dockerignore.
+COPY web/ ./
 RUN npm run build
 
 FROM deltares/sfincs-cpu@sha256:4301bffc74f3cb3f334be5d21aa75dfe5742a16c9838942cdfc2f870859fb404 AS solver
@@ -24,6 +26,8 @@ COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/terrain3d.bundle.
 COPY --from=frontend --chown=$MAMBA_USER:$MAMBA_USER /frontend/hybrid.bundle.js /work/web/hybrid.bundle.js
 COPY --chown=$MAMBA_USER:$MAMBA_USER scripts /work/scripts
 COPY --chown=$MAMBA_USER:$MAMBA_USER docs /work/docs
+COPY --chown=$MAMBA_USER:$MAMBA_USER README.md METHODOLOGY.md SOURCES.md /work/
+COPY --chown=$MAMBA_USER:$MAMBA_USER skills/property-boundary-review /work/skills/property-boundary-review
 COPY --chown=$MAMBA_USER:$MAMBA_USER tests /work/tests
 COPY --chown=$MAMBA_USER:$MAMBA_USER deploy /work/deploy
 # Isolate the released solver's ELF loader/libraries from the Conda geospatial ABI.

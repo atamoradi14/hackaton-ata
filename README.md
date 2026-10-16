@@ -120,11 +120,12 @@ instead when it is healthy.
 Stop only the instance you created with `docker stop flowlab-local`; do not remove
 data volumes. Do not run production Compose merely to test locally.
 
-Fresh-image caveat: the current Dockerfile frontend stage copies an explicit
-file list, but `terrain-workspace.js` also imports the newer boundary editor and
-geometry modules. That packaging list must include their transitive imports
-before a clean source-image build can be considered ready. This documentation
-update does not fix/rebuild the image or claim a clean build passed.
+Fresh-image packaging was repaired for release `boundary-evidence-20261016-r1`:
+the frontend stage now includes the shared boundary-editor/geometry modules and
+their transitive imports. That image built successfully with 29 focused Python
+tests passing. It also includes these guides and the review skill, but not private
+data or credentials. A local image build does not establish a cluster rollout;
+consult PROGRESS.md for actual deployment/access status before using the tag.
 
 The older `scripts/start-app.ps1` uses the prepared WSL environment and port
 **8765**, not 8774, and does not itself inject `.env.production`. It is a different

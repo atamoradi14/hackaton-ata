@@ -12,3 +12,8 @@ scripts/hydromt_api_reference.txt
 node_modules
 web/node_modules
 output
+*.gdb
+*.laz
+*.las
+*.tif
+*.tiff
