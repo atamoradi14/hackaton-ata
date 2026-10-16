@@ -27,3 +27,4 @@ reports/
 node_modules/
 output/
 .playwright-cli/
+groundtruth.gdb/

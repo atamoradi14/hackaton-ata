@@ -1231,3 +1231,273 @@ at 127.0.0.1:8774. No full suite, hydraulics or deployment.
 Next: invoke the new skill on another confirmed property with its own adequate
 views; unresolved concealed details still require better imagery/profiles or
 field measurement rather than cross-property defaults.
+
+## 2026-10-16 - Numeric type and height classification confidence
+
+Added explicit type and height class labels with separately authored confidence
+scores in [0,1], shown as 0-100% in the 3D summary, field rows, component notes and
+boundary selector. Numeric judgments are subjective/uncalibrated, not measured
+accuracy or probabilities. No automatic low/medium-to-number conversion.
+Height classes are fixed metre bands, variable_height for mixed corridors, and
+unresolved for an unsupported isolated component. Numeric estimates/ranges and
+canopy-vs-fence methods are preserved; no height fabricated to fill a class.
+
+Scored all nine original boundary edges of both confirmed samples, with explicit
+component scores where reviewed. Kitenui frontage: hedge .90, 2-<3 m .55 with
+the existing 2.34 m candidate foliage envelope. Mixed edges use variable_height
+without pretending to have a uniform physical crest. Hidden observation slots
+retain occluded/unresolved and zero physical-attribute confidence. Full source,
+geometry, crossing and manual values unchanged. Prior prediction revisions are
+archived; scoring drafts reference their exact SHA256.
+
+Updated installed and portable property-boundary-review skill with numeric-score
+semantics; both validate. Packaged the updated skill as
+output/skills/property-boundary-review-numeric-confidence-20261016.zip.
+Focused checks: 27 classification/prediction tests passed in the local container;
+JS numeric-label and form-precedence checks passed; frontend build and diff check
+passed. Invalid/nonfinite/out-of-range/boolean confidence and inconsistent labels
+are rejected; classifier and field confidence must agree.
+
+Playwright selected all five Kitenui edges and read the new class/score summaries.
+Visually inspected output/playwright/kitenui-numeric-classification.png showing
+hedge 90%, 2-<3 m / 2.34 m 55%. No manual review saved by this work. Local server
+remains on 8774. No full suite, data acquisition, hydraulics or deployment.
+
+Next: calibrate these subjective scores against independent labelled examples
+before interpreting percentages as a statistical success rate.
+
+## 2026-10-16 - Regional Mt Albert boundary/flow crossing-object JSON export
+
+Added the Boundaries page's `Export Mt Albert crossings JSON` button and a link
+from the inline 3D boundary editor. Read-only endpoint:
+`GET /api/properties/mt-albert-flow-crossings`. It reads saved properties, source
+asset candidates, LiDAR candidates, fresh predictions/components and manual
+reviews; it does not acquire providers, run AI or simulate hydraulics.
+
+Only properly crossing boundary edges enter `crossed_boundaries`; touching,
+overlapping and nearby paths are excluded. `objects` contains the wider linked
+candidate inventory. `crossing_object_ids` selects the narrower subset whose
+geometry intersects a matched mapped flow and lies within the saved tolerance
+of the boundary/path intersection. Per-association distances/intersections,
+two GIS/NZTM endpoints, classifications/confidence, dimensions, raw attributes,
+reviews and provenance are retained. Geometry-less image components never
+inherit a parent's crossing. Stale or concealed labels are not asserted types.
+
+Actual supplied `AC_OLFP_Obstructions.gdb` was inspected read-only: layer
+`AC_OLFP_obstructions_20261016`, 1,443 MultiLineString features, EPSG:2193.
+Four geometries intersect the pilot bounds; inspected type fields are null.
+Normalised all supplied features into the private supplemental JSON, retaining
+raw attributes, coordinates, layer identity and per-file hashes. This adds 11
+property-linked candidate records across the saved coverage without rewriting
+original property records. Missing physical types/dimensions remain unknown.
+GDAL emitted an existing PROJ database-path diagnostic during inspection/import;
+the reader returned explicit EPSG:2193 and no reprojection was performed.
+
+Actual export: 334 recorded properties / 2,592 edges in the declared scope;
+116 properties with 278 crossing boundary records. 266 linked object records:
+177 classified, 89 unclassified. 104 are spatially near boundary intersections;
+91 also intersect the mapped flow (47 kerbs, 12 buildings, 3 vegetation, 29
+unclassified candidates). Nine image components have unresolved GIS positions.
+Zero record-read errors. These are property-scoped records, not guaranteed unique
+physical objects across neighbouring properties. No administrative suburb polygon
+is verified: coverage is the available Mt Albert/Sandringham pilot plus confirmed
+Mount Albert samples, NOT all Mt Albert properties or objects.
+
+Focused verification: `python -m pytest /tmp/test_crossing_export.py -q` in the
+existing local container: 9 passed. Fixtures check proper crossing vs touch/
+overlap/proximity, GIS geometry, near-vs-far linked objects, source types without
+invented confidence, deduplication within a property, unresolved image locations,
+stale/manual precedence, supplied null-type features, scope exclusion, cache
+invalidation and HTTP JSON. An initial preservation assertion compared in-memory
+tuples with JSON lists; changed it to compare original property bytes, then passed.
+`node --check web/properties.js`, `node --check web/boundary-editor.js`,
+`npm --prefix web run build`, and `git diff --check` passed.
+
+Restarted only `floodtwin-3d-local-review` to load the API route, retaining the
+existing environment/mounts. Local HTTP 200, cached export about 0.2 s / 3.7 MB
+compact JSON; cold generation reads raw bundles and can take several seconds.
+Playwright verified the 3D link and actual website download, parsed the downloaded
+JSON, checked counts/subset IDs, and saved
+`output/playwright/mt-albert-flow-crossing-objects.json`. Screenshot visually
+inspected: `output/playwright/mt-albert-crossing-export.png`.
+Server remains at 127.0.0.1:8774. No full suite, remote deployment or hydraulics.
+
+Next: acquire an authoritative suburb extent and additional property/source
+coverage before calling this a whole-suburb inventory; independently review
+unclassified candidates rather than inventing regional fence/wall labels.
+
+## 2026-10-16 - Executed crossed-only pilot detection and dataset update
+
+User requested actual processing, not another export-only change. Added and ran
+`features.crossing_detection.prepare('/work')` in the existing local container.
+Selected exactly the imported pilot's properly crossing records: 114 properties,
+272 original boundary records, 131 distinct shared edges. No detection was run
+for non-crossed edges or the three separate address-confirmed sample records.
+
+Actual sources: the original 4,292,729-return LiDAR tile, verified EPSG:2193 /
+NZVD2016 DEM and georeferenced LINZ 7.5 cm aerial. Source SHA256s, geometry,
+selection IDs, raw property SHA256s, algorithm snapshot and per-edge native
+support are recorded. Withheld and noise-class returns excluded; finite height
+QC and outside-building screening applied. Classified vegetation and roof
+returns stay separate from ambiguous low unclassified connected runs. Approximate
+return envelopes are NOT surveyed physical geometry; point spread is NOT width.
+No trained semantic model, model API, new provider imagery or hydraulics was run.
+
+Prepared 11 rotated aerial/profile sheets. The initial square crops were too
+small for thin-object review; replaced with edge-oriented strips, regenerated
+and inspected all 131 cases on all 11 sheets. SHA256 checks proved the inspected
+and final staged sheets byte-identical. Explicit hash-bound review records
+partial/missing tile coverage, roadside gaps, canopy occlusion and roof context.
+Five native vegetation clusters received authored hedge-like visual refinements;
+two pale frontage barriers received provisional fence-like image observations
+with low-wall/other alternatives, null object GIS geometry and null heights.
+No hidden fabric, material, buried depth or fence crest was invented.
+
+Published run `detection_51ed673cf50e4f33c6b8fb93` to private
+`data/property-registry/crossing-detections/<property>.json`. This stores 402
+property-linked native object candidate records (188 distinct edge clusters
+before duplication across neighbouring properties), plus four property-linked
+image-only fence-like components on two shared lines. Native object record types:
+285 vegetation, 69 building, 16 visually refined hedge, 32 unresolved. Parent
+record types: 133 vegetation, 63 mixed, 16 hedge, 4 provisional fence, 56 unresolved.
+All ten field assessments are explicit; unknowns are completed assessments, not
+fabricated dimensions. Scores are heuristic/subjective and NOT accuracy validated.
+Four-angle Earth + Street View coverage was NOT acquired for 114 properties.
+
+Registry read integration merges only crossed edges and their predicted objects.
+Manual reviews still win and existing assistant samples are not rewritten.
+Changed property inputs make the new proposals stale; previous detection files
+are archived on replacement. Preservation audit: 272 target records checked,
+all original property SHA256s match, all 990 non-crossed edges inside the 114
+affected records match their originals, zero stale bundles. Other pilot properties
+were not written. No original raw property, source or manual-review file changed.
+
+Local map now shows selected-edge detection type/score, object return envelopes,
+coverage and recorded evidence image. 3D editor supports the same records when
+the property already has a confirmed 3D workspace; no bulk workspace confirmation
+was invented. Atlas images use the existing read-only prediction-evidence route
+with a validated edge query/path. Export cache invalidates on detection updates.
+
+Focused verification: 34 tests passed in 2.62 s across only crossing detection,
+crossing export and existing boundary prediction tests. Covers strict selection,
+source class separation, no-return unknowns, native building exclusion, GIS
+geometry, manual/stale precedence, exact publication review, archives and
+image-only null crossing/geometry. One initial fixture assertion compared Shapely
+tuples with JSON arrays; normalised the persisted fixture and reran successfully.
+JS syntax checks, frontend build and git diff --check passed. No full suite.
+
+Restarted only local `floodtwin-3d-local-review`; existing env and mounts retained.
+HTTP property and correct edge-specific atlas image both return 200. Browser and
+file SHA256s match for the E026 evidence image. Playwright selected an actual
+hedge edge, enabled actual pilot aerial, displayed its native object support and
+loaded the review sheet. Visually inspected screenshot:
+`output/playwright/pilot-crossing-detection-hedge.png`.
+
+Playwright downloaded and parsed the updated regional JSON: 278 total crossed
+boundary records (272 new pilot assessments plus the prior samples), 672 total
+linked objects, 551 classified / 121 unresolved, 278 spatially intersecting mapped
+flows near boundary crossings. Object intersection is mapped screening, not
+proof of water obstruction. Every new target row has all ten field assessments.
+Zero export read errors. Saved refreshed QA download at
+`output/playwright/mt-albert-flow-crossing-objects.json`.
+
+Local server remains 127.0.0.1:8774. No remote deployment, training data upload,
+hydraulic model or unsupported claim of accurate/complete fence-wall detection.
+Next: targeted oblique/street/field review of the 56 unresolved boundary records,
+thin image-only barriers and source-coverage gaps before accuracy can be claimed.
+
+## 2026-10-16 - Groundtruth.gdb comparison: no assessed pilot overlap
+
+Read the user-supplied `groundtruth.gdb` without editing it; copied it into the
+existing local runtime at `/tmp/flowlab-groundtruth.gdb` for GDAL/pyogrio reads.
+One layer: `AC_OLFP_obstructions_20261016`, 1,443 valid MultiLineStrings,
+EPSG:2193. Across the GDB, 251 rows have any assessment information and 147 have
+non-null Landscape_Structure text. Actual coded domains: Fence_Wall_Obstruction,
+Contour and Building 0=None, 1=Low, 2=Medium, 3=High; these are not semantic
+fence/wall IDs or measured heights. No dedicated height measurement field.
+
+Only four reference lines intersect the pilot, and only those same four intersect
+the 1 m corridors around our 131 distinct crossed lines. ALL four have null
+structure, obstruction/contour/building assessment, comments and guidance fields.
+Zero eligible assessed/type-labelled references overlap the 272-record prediction
+scope. Nearest assessed reference is 1,981.97 m from the tile. Thus type accuracy,
+detection precision/recall, height error and severity accuracy are null/not
+evaluable, NOT zero percent. No empty reference value was treated as a negative.
+
+Verified reference IDs/geometries: all 1,443 match the previously imported
+supplemental source snapshot, and all non-length attributes match. The old
+AC_OLFP_Obstructions.gdb folder is no longer present; an initial file-name hash
+comparison therefore did not demonstrate changed contents. Used saved source
+JSON instead and ignored Shape_Length float serialization differences.
+Excluded imported source features from predicted detections to avoid scoring
+copied reference context. Deduplicated 402 native object records to 188 distinct
+geolocated clusters; two distinct image-only components have no spatial match.
+Parent cadastral lines are not detected physical objects.
+
+Spatial-only check: all four unassessed reference lines have 100% length coverage
+within a 1 m buffer of the union of native detection envelopes. This is location
+agreement only; broad vegetation/roof/unknown envelopes do NOT establish correct
+fence/wall identification, validated precision/recall or a 100% accuracy claim.
+Saved each line's attributes, geometry and 0.5/1/2 m sensitivity results.
+
+Added an offline read-only coverage evaluator:
+`python -m floodtwin.validation.groundtruth_check --root /work --groundtruth /tmp/flowlab-groundtruth.gdb`.
+Ran it on actual data. Report:
+`data/property-registry/evaluations/groundtruth-6163042496be396e/report.json`
+and the human-readable `report.md`. Predictions, raw property records and runtime
+reference copy hashes all unchanged. No dataset relabelling, source amendment,
+confidence changes, model inference, app/API edits, server restart or deployment.
+An existing PROJ-path diagnostic was emitted, but the reader returned EPSG:2193
+and no coordinate/vertical transforms were made during matching.
+
+Focused verification: `python -m pytest /tmp/test_groundtruth_check.py -q`:
+4 passed in 0.49 s. Tests distinguish missing labels from explicit numeric zero,
+verify spatial tolerance effects, prevent duplicate coverage inflation and leave
+distance null without predictions. `git diff --check` passed. No full suite.
+
+Next: obtain completed pilot reference labels and measured dimensions/assessed
+positive-negative coverage, or ask the user to select an assessed area for a new,
+separate prediction/evaluation run. Do not invent a numerical accuracy score from
+the current zero-denominator overlap.
+
+## 2026-10-16 - Exact four pilot objects: record and visual validation
+
+User retained the current pilot and requested the exact four objects, not an
+area change. Read-only OGR check confirmed OBJECTIDs 739/873/874/875 and their
+GlobalIDs against the saved spatial report. All semantic/assessment fields on
+these exact features are genuinely null, including assessment/obstruction IDs;
+no related assessment table was found in the one-layer GDB.
+
+Inspected sibling submission reference schemas and spatially compared its
+allfences, detected, structures, v12 export, two manual-check GeoJSONs and
+property-impact barrier-check snapshot. Those fence IDs are not our edge IDs.
+No manual check overlaps the four GT objects: nearest manual geometries are
+23.68/9.10/19.57/30.57 m away. Did not copy nearby fence labels. Sibling CV.md and
+README explicitly identify Claude labels as unchecked AI development labels,
+not independent truth; manual checks are visual, not field verified.
+
+Using the property-boundary-review skill, rendered and visually inspected four
+actual aerial/native LiDAR class/profile plots with exact GT geometry overlay.
+Visible interpretations: 739 dense trees/shrubs; 873 tall trees/lower shrubs;
+874 narrow clipped hedge; 875 L-shaped hedge around lawn. Authored subjective
+type confidence .90/.95/.85/.90 in a separate diagnostic review only. No hidden
+fence/wall or physical crest validated. Exact 1 m corridor p95 return heights
+5.34/11.80/2.17/2.50 m are vegetation envelopes, not barrier heights. Existing
+3.44/3.78 m clusters near 875 cover broader groups than the exact reference.
+Saved broad vegetation classifications are plausible but do not certify fence
+recognition. No independent semantic accuracy or height-error score available.
+
+Artifacts: output/groundtruth-four/report.md, matches.json, visual-review.json,
+four object-N.png evidence plots, inspect_four.py and render_evidence.py.
+These remain local/ignored. No exactly matched Street View/oblique set acquired;
+excluded a supplied local screenshot with filename 69 but visible house number
+86 because its identity with these four reference objects was not established.
+
+Commands: docker exec Python diagnostic and rendering scripts; targeted OGR
+OBJECTID/GlobalID/null-field assertions; spatial non-match assertions; hashes of
+all 114 saved predictions and the GDB matched the prior report. git diff --check
+passed. Existing PROJ-path warning remains; comparisons used verified EPSG:2193
+with explicit standard WGS84-to-NZTM transform for sibling GeoJSON. No raw source,
+prediction, review or geometry relabelling, app edit, restart, deployment or full
+test suite. Next useful validation is matched oblique/street/field evidence of
+the concealed physical barriers, rather than treating these visual labels as GT.

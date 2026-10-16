@@ -6,7 +6,7 @@ import os
 import secrets
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, parse_qs
 
 from .workspace import Workspaces, read_json, BusyError
 
@@ -154,6 +154,7 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                 self.json({"error": "The requested app host is not allowed"}, 403)
                 return
             path = unquote(urlparse(self.path).path)
+            query = parse_qs(urlparse(self.path).query)
             try:
                 if path == "/healthz":
                     self.json({"status": "ok"})
@@ -174,6 +175,9 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     self.json(registry.collection()); return
                 if path == '/api/properties/export':
                     self.json(registry.export()); return
+                if path == '/api/properties/mt-albert-flow-crossings':
+                    from ..features.crossing_export import cached_export
+                    self.json(cached_export(registry)); return
                 if path.startswith('/api/property-assets/'):
                     name=path.split('/')[-1]
                     if name not in {'pointcloud.laz','dem.tif','dsm.tif','aerial.tif','scene-aerial.jpg','map-aerial.png','map-aerial.json'}:
@@ -187,8 +191,16 @@ def make_server(root, port=8765, workspaces=None, bind="127.0.0.1", public_origi
                     elif len(parts)==5 and parts[4]=='boundaries': self.json(registry.geojson(pid))
                     elif len(parts)==5 and parts[4]=='points': self.json(registry.point_export(pid))
                     elif len(parts)==5 and parts[4]=='prediction-evidence':
-                        registry.get(pid)
-                        self.send((registry.folder/'sample-evidence'/pid/'top-evidence.png').read_bytes(),'image/png')
+                        value=registry.get(pid)
+                        target=registry.folder/'sample-evidence'/pid/'top-evidence.png'
+                        if not target.is_file():
+                            edges=[e for e in value['boundary_segments'] if e.get('detection')]
+                            edge=next((e for e in edges if e['id']==query.get('edge',[''])[0]),edges[0] if edges else None)
+                            if edge is None: raise ValueError('No recorded prediction image')
+                            target=(root/edge['detection']['evidence_image']['path']).resolve()
+                            if not target.is_relative_to((registry.folder/'crossing-detection-runs').resolve()):
+                                raise ValueError('Invalid detection evidence path')
+                        self.send(target.read_bytes(),'image/png')
                     else: raise ValueError('Property route not available')
                     return
                 if path.startswith('/api/property-sources/'):

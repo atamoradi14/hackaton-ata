@@ -68,6 +68,9 @@ def validate(record,bundle):
     if len({r['entity_id'] for r in results})!=len(results): raise ValueError('Duplicate entity prediction')
     if {r['entity_id'] for r in results}!=ids: raise ValueError('Every recorded/sample entity needs an explicit prediction or not-applicable result')
     for item in results:
+        from .classifications import validate as validate_classification
+        validate_classification(item)
+        for component in item.get('components',[]): validate_classification(component)
         if item.get('status') not in {'unreviewed_prediction','not_applicable'} or not item.get('rationale'):
             raise ValueError('Explicit prediction status and evidence rationale required')
         if item.get('confidence') not in {'low','medium','not_assessed'}:

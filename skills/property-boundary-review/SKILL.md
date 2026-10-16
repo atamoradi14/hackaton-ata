@@ -127,7 +127,13 @@ measurement from photos. Use null plus a concrete reason and required follow-up.
 Keep confidence **per field**, with source IDs and method. Confidence in 'hedge'
 does not transfer to a hedge height, fence material, boundary coincidence or
 hydraulic porosity. Prefer broad, labelled visual ranges over false precision.
-Do not invent a probability or call a range a calibrated confidence interval.
+Record separately authored numeric type and height confidence scores in [0,1],
+displayed as 0-100%. Use explicit classification labels for both, including height
+bands and variable_height for mixed objects. The score is a subjective evidence
+judgment, NOT a calibrated probability/accuracy rate. Do not mechanically convert
+low/medium words into numbers. Never call a range a calibrated confidence interval.
+Use unresolved/occluded labels with a zero physical-attribute score when no
+defensible assignment exists; a low score does not justify inventing a height.
 Conflicts across dates remain documented; do not silently merge a removed fence
 and a newer hedge into one current structure.
 

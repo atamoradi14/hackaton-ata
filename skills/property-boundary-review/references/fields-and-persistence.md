@@ -6,6 +6,23 @@ Every field needs `status`, `confidence`, `basis` and `source_ids`. Use
 `estimated`, `unknown` or `mapped_screening`; confidence `low`, `medium` or
 `not_assessed` in the current FlowLab schema. Do not silently raise these enums.
 Unknown is a completed assessment, not a missing field. Numeric values are metres.
+For new reviewed labels also require `classifications.type` and
+`classifications.height`, each with `label` and `confidence_score` in [0,1].
+Use `confidence_method: assistant_subjective_uncalibrated`, `calibrated: false`
+and an authored `score_basis`. The UI displays percentages, not validated
+probabilities. Legacy confidence words remain only for compatibility.
+
+Height bands are <0.5, 0.5-<1, 1-<2, 2-<3, 3-<5, 5-<10 and >=10 metres;
+mixed edges can use variable_height without inventing a single numeric height.
+Retain actual estimate/range/height method separately. Confidence in a variable
+class is not confidence in a numeric crest. Occluded/unresolved/not-applicable
+physical values receive zero, not a fabricated certain label.
+See `src/floodtwin/features/classifications.py`: `annotate` attaches an explicitly
+authored score pair; `save_scores(root,pid,review_path)` requires a property ID,
+SHA256 of the exact current prediction JSON and every edge's numeric type/height
+score plus rationale. Optional component scores are keyed by component ID (or
+component_1 etc. for older coarse notes). It archives before saving; never reuse
+a scoring review after the underlying prediction revision changes.
 
 | Field | Interpretation |
 |---|---|

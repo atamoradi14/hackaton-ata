@@ -269,6 +269,9 @@ class Registry:
     def get(self,pid):
         value=read(self._path(pid))
         if value is None: raise ValueError('Property not recorded')
+        detection=read(self.folder/'crossing-detections'/(pid+'.json'))
+        detection_stale=bool(detection and detection.get('property_sha256')!=hashlib.sha256(
+            json.dumps(value,sort_keys=True,default=str).encode()).hexdigest())
         reviews=read(self.folder/'reviews'/(pid+'.json'),{})
         for edge in value['boundary_segments']:
             if edge['id'] in reviews:
@@ -285,6 +288,20 @@ class Registry:
             value['prediction_objects']=bundle.get('inferred_objects',[])
             for entity in [*value['boundary_segments'],*value['objects'],*value['prediction_objects']]:
                 if entity['id'] in predicted: entity['prediction']=predicted[entity['id']]
+        if detection:
+            value['detection_bundle']={k:v for k,v in detection.items() if k not in {'entities','inferred_objects'}}
+            value['detection_bundle']['stale']=detection_stale
+            value.setdefault('prediction_bundle',value['detection_bundle'])
+            detected={r['entity_id']:dict(r,stale=detection_stale) for r in detection['entities']}
+            original_ids={o['id'] for o in value['objects']+value['prediction_objects']}
+            value['prediction_objects'].extend(copy.deepcopy(o) for o in detection['inferred_objects'] if o['id'] not in original_ids)
+            for entity in [*value['boundary_segments'],*value['prediction_objects']]:
+                if entity['id'] not in detected: continue
+                row=detected[entity['id']];entity['detection']=row
+                if not entity.get('prediction') or entity['prediction'].get('stale'): entity['prediction']=row
+                if entity.get('flow_path',{}).get('crossed_by_flow_path') is True:
+                    ids={r['object_id'] for r in entity['nearby_objects']}
+                    entity['nearby_objects'].extend(dict(object_id=oid,distance_m=None) for oid in row.get('detected_object_ids',[]) if oid not in ids)
         object_reviews=read(self.folder/'object-reviews'/(pid+'.json'),{})
         for obj in [*value['objects'],*value['prediction_objects']]:
             if obj['id'] in object_reviews:
